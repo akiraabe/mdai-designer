@@ -205,6 +205,39 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage]);
 
+  const handleLoad = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('handleLoad called', e.target.files);
+    const file = e.target.files?.[0];
+    console.log('Selected file:', file);
+    if (file && file.type === 'application/json') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const result = e.target?.result;
+          if (typeof result === 'string') {
+            const docData: DocumentData = JSON.parse(result);
+            
+            // データを復元
+            setConditionsMarkdown(docData.conditions || '');
+            setSupplementMarkdown(docData.supplement || '');
+            setSpreadsheetData(docData.spreadsheet || []);
+            setMockupImage(docData.mockup || null);
+            
+            alert('設計書を読み込みました！');
+          }
+        } catch (error) {
+          alert('JSONファイルの読み込みに失敗しました。');
+          console.error('Load error:', error);
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      alert('JSONファイルを選択してください。');
+    }
+    // ファイル選択をリセット
+    e.target.value = '';
+  }, []);
+
   const tabs: TabInfo[] = [
     { id: 'all', label: '全体表示', icon: FileText },
     { id: 'conditions', label: '表示条件', icon: FileText },
@@ -225,13 +258,34 @@ const App: React.FC = () => {
               最終更新: {new Date().toLocaleDateString('ja-JP')} | 作成者: 設計チーム
             </div>
           </div>
-          <button
-            onClick={handleSave}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            保存
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                console.log('読み込みボタンクリック');
+                const input = document.getElementById('load-json') as HTMLInputElement;
+                console.log('input element:', input);
+                input?.click();
+              }}
+              className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors border-2 border-orange-800"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              読み込み
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleLoad}
+              className="hidden"
+              id="load-json"
+            />
+            <button
+              onClick={handleSave}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              保存
+            </button>
+          </div>
         </div>
       </div>
 
