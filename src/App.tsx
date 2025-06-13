@@ -4,8 +4,8 @@ import { Upload, FileText, Image, Table, Save, Download } from 'lucide-react';
 import './App.css'
 
 // 実際の環境では以下のimportを使用
-// import { Workbook } from '@fortune-sheet/react';
-// import '@fortune-sheet/react/dist/index.css';
+import { Workbook } from '@fortune-sheet/react';
+import '@fortune-sheet/react/dist/index.css';
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 
@@ -18,7 +18,7 @@ interface CellPosition {
 interface DocumentData {
   conditions: string;
   supplement: string;
-  spreadsheet: string[][];
+  spreadsheet: any; // Fortune-Sheetの完全なJSON構造
   mockup: string | null;
   timestamp: string;
 }
@@ -29,131 +29,28 @@ interface TabInfo {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-// Fortune-Sheetの代替実装（デモ用）
-interface FortuneSheetDemoProps {
-  data: string[][];
-  onChange: (data: string[][]) => void;
-  height?: string;
+// 本格的なFortune-Sheetコンポーネント
+interface SpreadsheetEditorProps {
+  data: any;
+  onChange: (data: any) => void;
 }
 
-const FortuneSheetDemo: React.FC<FortuneSheetDemoProps> = ({ 
+const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = React.memo(({ 
   data, 
-  onChange, 
-  height = "400px" 
+  onChange 
 }) => {
-  const [editingCell, setEditingCell] = useState<CellPosition | null>(null);
-  const [cellValue, setCellValue] = useState<string>('');
-
-  const handleCellClick = useCallback((rowIndex: number, colIndex: number) => {
-    setEditingCell({ row: rowIndex, col: colIndex });
-    setCellValue(data[rowIndex][colIndex] || '');
-  }, [data]);
-
-  const handleCellChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setCellValue(e.target.value);
-  }, []);
-
-  const handleCellBlur = useCallback(() => {
-    if (editingCell) {
-      const newData = [...data];
-      newData[editingCell.row][editingCell.col] = cellValue;
-      onChange(newData);
-      setEditingCell(null);
-    }
-  }, [editingCell, cellValue, data, onChange]);
-
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleCellBlur();
-    }
-  }, [handleCellBlur]);
-
-  const addRow = useCallback(() => {
-    const newRow = new Array(data[0]?.length || 6).fill('');
-    onChange([...data, newRow]);
-  }, [data, onChange]);
-
-  const addColumn = useCallback(() => {
-    const newData = data.map(row => [...row, '']);
-    onChange(newData);
-  }, [data, onChange]);
-
   return (
-    <div className="border border-gray-300 bg-white" style={{ height, overflow: 'auto' }}>
-      {/* ツールバー */}
-      <div className="bg-gray-50 border-b px-2 py-1 text-xs flex items-center space-x-4">
-        <button 
-          onClick={addRow}
-          className="px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-        >
-          + 行追加
-        </button>
-        <button 
-          onClick={addColumn}
-          className="px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-        >
-          + 列追加
-        </button>
-        <button className="px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
-          <Upload className="w-3 h-3 inline mr-1" />
-          Excel貼り付け
-        </button>
-        <button className="px-2 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200">
-          <Download className="w-3 h-3 inline mr-1" />
-          CSV出力
-        </button>
-      </div>
-      
-      {/* スプレッドシート */}
-      <div className="overflow-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 p-1 w-8 text-center">#</th>
-              {Array.from({ length: data[0]?.length || 6 }, (_, index) => (
-                <th key={index} className="border border-gray-300 p-1 w-32 text-center font-medium">
-                  {String.fromCharCode(65 + index)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                <td className="border border-gray-300 p-1 bg-gray-50 text-center text-xs font-medium">
-                  {rowIndex + 1}
-                </td>
-                {row.map((cell, colIndex) => (
-                  <td 
-                    key={colIndex} 
-                    className="border border-gray-300 p-0 h-8 cursor-pointer hover:bg-blue-50"
-                    onClick={() => handleCellClick(rowIndex, colIndex)}
-                  >
-                    {editingCell && editingCell.row === rowIndex && editingCell.col === colIndex ? (
-                      <input
-                        type="text"
-                        value={cellValue}
-                        onChange={handleCellChange}
-                        onBlur={handleCellBlur}
-                        onKeyPress={handleKeyPress}
-                        className="w-full h-full px-1 border-none outline-none bg-white"
-                        autoFocus
-                      />
-                    ) : (
-                      <div className="px-1 py-1 h-full flex items-center">
-                        {cell || ''}
-                      </div>
-                    )}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div style={{ height: '500px', width: '100%' }}>
+      <Workbook
+        data={data}
+        onChange={onChange}
+        showToolbar={true}
+        showSheetTabs={true}
+        lang="zh"
+      />
     </div>
   );
-};
+});
 
 // 本格的なMarkdownエディタ
 interface MarkdownEditorProps {
@@ -230,18 +127,48 @@ const App: React.FC = () => {
 - 大量データの場合はページネーション実装
 - キャッシュ機能により応答速度向上`);
 
-  // スプレッドシートデータ
-  const [spreadsheetData, setSpreadsheetData] = useState<string[][]>([
-    ['項目名', '型', '必須', '最大長', '説明', '備考'],
-    ['ユーザーID', 'String', '○', '20', '一意識別子', 'UUID形式'],
-    ['ユーザー名', 'String', '○', '50', '表示名', ''],
-    ['メールアドレス', 'String', '○', '100', 'ログイン用', 'RFC準拠'],
-    ['パスワード', 'String', '○', '128', 'ハッシュ化済み', 'bcrypt'],
-    ['作成日時', 'DateTime', '○', '', '登録日時', 'ISO8601'],
-    ['更新日時', 'DateTime', '○', '', '最終更新', 'ISO8601'],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
-    ['', '', '', '', '', ''],
+  // スプレッドシートデータ（Fortune-Sheet形式）
+  const [spreadsheetData, setSpreadsheetData] = useState([
+    {
+      name: "項目定義",
+      data: [
+        [
+          { v: '項目名', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
+          { v: '型', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
+          { v: '必須', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
+          { v: '最大長', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
+          { v: '説明', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
+          { v: '備考', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 }
+        ],
+        [
+          { v: 'ユーザーID' }, { v: 'String' }, { v: '○' }, { v: '20' }, 
+          { v: '一意識別子' }, { v: 'UUID形式' }
+        ],
+        [
+          { v: 'ユーザー名' }, { v: 'String' }, { v: '○' }, { v: '50' }, 
+          { v: '表示名' }, { v: '' }
+        ],
+        [
+          { v: 'メールアドレス' }, { v: 'String' }, { v: '○' }, { v: '100' }, 
+          { v: 'ログイン用' }, { v: 'RFC準拠' }
+        ],
+        [
+          { v: 'パスワード' }, { v: 'String' }, { v: '○' }, { v: '128' }, 
+          { v: 'ハッシュ化済み' }, { v: 'bcrypt' }
+        ],
+        [
+          { v: '作成日時' }, { v: 'DateTime' }, { v: '○' }, { v: '' }, 
+          { v: '登録日時' }, { v: 'ISO8601' }
+        ],
+        [
+          { v: '更新日時' }, { v: 'DateTime' }, { v: '○' }, { v: '' }, 
+          { v: '最終更新' }, { v: 'ISO8601' }
+        ]
+      ],
+      config: {
+        columnlen: { 0: 120, 1: 80, 2: 60, 3: 80, 4: 150, 5: 120 }
+      }
+    }
   ]);
 
   const [mockupImage, setMockupImage] = useState<string | null>(null);
@@ -406,16 +333,15 @@ const App: React.FC = () => {
                 </div>
               </div>
               
-              <FortuneSheetDemo 
+              <SpreadsheetEditor 
                 data={spreadsheetData}
                 onChange={setSpreadsheetData}
-                height="450px"
               />
               
               <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded">
-                <strong>使い方:</strong> 
-                セルをクリックして編集 | Enterで確定 | 
-                実際の環境では Fortune-Sheet が提供する豊富な機能（数式、書式設定、行列追加等）が利用可能
+                <strong>Fortune-Sheet機能:</strong> 
+                Excel並みの編集機能 | 数式・書式設定・条件付き書式 | 
+                CSV/Excel読み込み・書き出し | すべてJSON形式で完全保存
               </div>
             </div>
           </MarkdownSection>
