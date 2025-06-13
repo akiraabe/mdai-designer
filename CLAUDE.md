@@ -28,16 +28,42 @@ npm run preview      # ビルド後のプレビュー
   - `@uiw/react-md-editor`: Markdownエディタ（本番稼働中）
 
 ### アプリケーション構造
-- **単一ページアプリケーション**: App.tsxに全機能を集約
+- **単一ページアプリケーション**: 設計文書の統合編集・管理
 - **タブベースUI**: 4つのメイン機能（全体表示/表示条件/画面イメージ/項目定義）
-- **状態管理**: React useState hooks でローカル状態管理
+- **状態管理**: カスタムフックで状態・ロジック分離
 - **データ永続化**: JSON形式でローカルファイルシステムへ保存・読み込み
+- **コンポーネント指向**: 機能別にコンポーネント分割、保守性・テスタビリティ向上
 
-### コンポーネント構成
-- **App.tsx**: メインアプリケーションコンポーネント（全機能統合）
-- **SpreadsheetEditor**: Fortune-Sheet Workbookのラッパーコンポーネント
-- **MarkdownEditor**: @uiw/react-md-editorのラッパーコンポーネント
-- **MarkdownSection**: 再利用可能なセクションコンポーネント
+### アーキテクチャ構成（リファクタリング後）
+
+#### カスタムフック（状態・ロジック管理）
+- **useDocumentState**: Markdown・スプレッドシート・画像の状態管理
+- **useTabNavigation**: タブ切り替え状態管理
+- **useFileOperations**: JSON保存・読み込み・画像アップロード処理
+- **useSpreadsheetOperations**: スプレッドシート操作・テストデータ読み込み
+- **useInitialData**: 初期データ定数管理
+
+#### UIコンポーネント
+##### Header系
+- **DocumentHeader**: タイトル・更新日時・作成者表示
+- **ActionButtons**: 読み込み・保存・テストデータボタン
+
+##### Navigation系  
+- **TabNavigation**: タブ切り替えUI・アクティブ状態管理
+
+##### Content系
+- **ConditionsSection**: 表示条件Markdown編集セクション
+- **MockupSection**: 画面イメージアップロード・表示セクション
+- **DefinitionsSection**: 項目定義スプレッドシート編集セクション
+- **SupplementSection**: 補足説明Markdown編集セクション
+
+##### Common系（共通コンポーネント）
+- **MarkdownSection**: セクションレイアウト・アイコン・タイトル
+- **MarkdownEditor**: @uiw/react-md-editorラッパー
+- **SpreadsheetEditor**: Fortune-Sheet Workbookラッパー
+
+#### メインコンポーネント
+- **App.tsx**: 各コンポーネント統合・条件レンダリングのみ（145行に削減）
 
 ### データフロー
 ```typescript
@@ -50,12 +76,25 @@ interface DocumentData {
 }
 ```
 
-### 状態管理パターン
+### 状態管理パターン（カスタムフック化）
+
+#### useDocumentState
 - **conditionsMarkdown**: 表示条件のMarkdownテキスト
 - **supplementMarkdown**: 補足説明のMarkdownテキスト
 - **spreadsheetData**: Fortune-Sheetのcelldata形式（配列）
 - **mockupImage**: Base64エンコードされた画像データ
-- **activeTab**: 現在表示中のタブID
+
+#### useTabNavigation  
+- **activeTab**: 現在表示中のタブID（'all' | 'conditions' | 'mockup' | 'definitions'）
+
+#### useFileOperations
+- **handleImageUpload**: 画像ファイルアップロード処理
+- **handleSave**: JSON形式でのドキュメント保存
+- **handleLoad**: JSONファイル読み込み・データ復元
+
+#### useSpreadsheetOperations
+- **handleLoadTestData**: 紫ボタン・テストデータ読み込み
+- ライブラリ乗り換え対応のための抽象化レイヤー
 
 ## 重要な実装注意点
 
@@ -63,6 +102,18 @@ interface DocumentData {
 - UIは完全に日本語で構築
 - ドキュメント管理は日本語環境向け
 - コンソールログも日本語併記
+
+### 開発・保守性向上
+- **段階的リファクタリング**: 初期615行→145行（約77%削減）
+- **責任分離**: 状態管理・ビジネスロジック・UI表示の完全分離
+- **再利用性**: 共通コンポーネント化によるDRY原則遵守
+- **型安全性**: TypeScript型定義の一元管理
+- **テスタビリティ**: カスタムフック・コンポーネント単位での独立テスト可能
+
+### 推奨開発フロー
+1. **新機能追加**: 対応するカスタムフックに処理追加→UIコンポーネント更新
+2. **バグ修正**: 該当するフック・コンポーネントを特定→局所的修正
+3. **ライブラリ変更**: Common系コンポーネントの実装のみ変更
 
 ## 重要：Fortune-Sheetコンポーネントのチカチカ問題対策
 
