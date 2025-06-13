@@ -1,7 +1,5 @@
 import { useState } from 'react';
-
-// タブID型定義
-type TabId = 'all' | 'conditions' | 'mockup' | 'definitions';
+import type { TabId } from '../components/Navigation/TabNavigation';
 
 export const useTabNavigation = () => {
   const [activeTab, setActiveTab] = useState<TabId>('all');

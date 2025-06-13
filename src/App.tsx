@@ -15,9 +15,10 @@ import { useSpreadsheetOperations } from './hooks/useSpreadsheetOperations';
 import { useTabNavigation } from './hooks/useTabNavigation';
 import { useDocumentState } from './hooks/useDocumentState';
 
-// ヘッダーコンポーネント
+// UIコンポーネント
 import { DocumentHeader } from './components/Header/DocumentHeader';
 import { ActionButtons } from './components/Header/ActionButtons';
+import { TabNavigation } from './components/Navigation/TabNavigation';
 
 // 型定義
 interface DocumentData {
@@ -28,11 +29,6 @@ interface DocumentData {
   timestamp: string;
 }
 
-interface TabInfo {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
 
 // Fortune-Sheetコンポーネント（onChange対応）
 interface SpreadsheetEditorProps {
@@ -199,12 +195,6 @@ const App: React.FC = () => {
   });
 
 
-  const tabs: TabInfo[] = [
-    { id: 'all', label: '全体表示', icon: FileText },
-    { id: 'conditions', label: '表示条件', icon: FileText },
-    { id: 'mockup', label: '画面イメージ', icon: Image },
-    { id: 'definitions', label: '項目定義', icon: Table },
-  ];
 
   return (
     <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
@@ -229,24 +219,10 @@ const App: React.FC = () => {
       </div>
 
       {/* タブナビゲーション */}
-      <div className="bg-white rounded-t-lg shadow-sm">
-        <div className="flex border-b overflow-x-auto">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                activeTab === id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Icon className="w-4 h-4 mr-2" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <TabNavigation
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
       {/* メインコンテンツ */}
       <div className="bg-white rounded-b-lg shadow-sm p-6">
