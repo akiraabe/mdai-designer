@@ -159,40 +159,124 @@ const FortuneSheetDemo: React.FC<FortuneSheetDemoProps> = ({
 interface MarkdownEditorDemoProps {
   value: string;
   onChange: (value: string) => void;
-  preview?: boolean;
 }
 
-const MarkdownEditorDemo: React.FC<MarkdownEditorDemoProps> = ({ 
+const MarkdownEditorDemo: React.FC<MarkdownEditorDemoProps> = React.memo(({ 
   value, 
-  onChange, 
-  preview = false 
+  onChange
 }) => {
-  const renderMarkdown = useCallback((markdown: string): string => {
-    return markdown
-      .replace(/\n/g, '<br>')
-      .replace(/## (.+)/g, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>')
-      .replace(/### (.+)/g, '<h3 class="text-lg font-semibold mt-3 mb-2">$1</h3>')
-      .replace(/- (.+)/g, '<li class="ml-4">• $1</li>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const [isPreview, setIsPreview] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const [textareaHeight, setTextareaHeight] = useState(256); // 初期高さ256px
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // カーソル位置追跡とサイズ記録
+  const handleSelectionChange = useCallback(() => {
+    if (textareaRef.current) {
+      setCursorPosition(textareaRef.current.selectionStart);
+      setTextareaHeight(textareaRef.current.offsetHeight);
+    }
   }, []);
 
-  if (preview) {
-    return (
-      <div className="prose max-w-none p-4 border rounded-lg bg-white">
-        <div dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }} />
-      </div>
-    );
-  }
+  // HTML変換（プレビュー時のみ実行）
+  const renderedHTML = React.useMemo(() => {
+    if (!isPreview) return '';
+    
+    let html = value;
+    
+    // 1. 見出しを処理
+    html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-3 mb-2">$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>');
+    
+    // 2. リストを処理
+    html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>');
+    
+    // 3. 太字を処理
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // 4. 改行を処理（最後に）
+    html = html.replace(/\n/g, '<br>');
+    
+    return html;
+  }, [value, isPreview]);
 
   return (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full h-32 p-3 border rounded-lg font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-      placeholder="Markdownで記述してください..."
-    />
+    <div className="space-y-2">
+      {/* トグルボタン */}
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={() => setIsPreview(false)}
+          className={`px-3 py-1 text-sm rounded ${
+            !isPreview 
+              ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          編集
+        </button>
+        <button
+          onClick={() => setIsPreview(true)}
+          className={`px-3 py-1 text-sm rounded ${
+            isPreview 
+              ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          プレビュー
+        </button>
+        {!isPreview && (
+          <span className="text-xs text-gray-500 ml-4">
+            カーソル位置: {cursorPosition} | 文字数: {value.length}
+          </span>
+        )}
+      </div>
+
+      {/* コンテンツ */}
+      {isPreview ? (
+        <div 
+          className="prose max-w-none p-4 border rounded-lg bg-white overflow-auto"
+          style={{ height: `${textareaHeight}px` }}
+        >
+          <div dangerouslySetInnerHTML={{ __html: renderedHTML }} />
+        </div>
+      ) : (
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onSelect={handleSelectionChange}
+          onKeyUp={handleSelectionChange}
+          onClick={handleSelectionChange}
+          className="w-full p-3 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Markdownで記述してください..."
+          style={{
+            caretColor: 'red',
+            fontSize: '16px',
+            lineHeight: '1.5',
+            height: `${textareaHeight}px`
+          }}
+        />
+      )}
+    </div>
   );
-};
+});
+
+// MarkdownSection コンポーネント
+const MarkdownSection: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+}> = React.memo(({ title, children, icon: Icon }) => (
+  <div className="mb-8">
+    <div className="flex items-center mb-4 border-b pb-2">
+      <Icon className="w-5 h-5 mr-2 text-blue-600" />
+      <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+    </div>
+    <div className="max-w-none">
+      {children}
+    </div>
+  </div>
+));
 
 // メインコンポーネント
 const App: React.FC = () => {
@@ -276,22 +360,6 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage]);
 
-  const MarkdownSection: React.FC<{
-    title: string;
-    children: React.ReactNode;
-    icon: React.ComponentType<{ className?: string }>;
-  }> = ({ title, children, icon: Icon }) => (
-    <div className="mb-8">
-      <div className="flex items-center mb-4 border-b pb-2">
-        <Icon className="w-5 h-5 mr-2 text-blue-600" />
-        <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-      </div>
-      <div className="max-w-none">
-        {children}
-      </div>
-    </div>
-  );
-
   const tabs: TabInfo[] = [
     { id: 'all', label: '全体表示', icon: FileText },
     { id: 'conditions', label: '表示条件', icon: FileText },
@@ -356,14 +424,6 @@ const App: React.FC = () => {
                 value={conditionsMarkdown}
                 onChange={setConditionsMarkdown}
               />
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">プレビュー:</h3>
-                <MarkdownEditorDemo
-                  value={conditionsMarkdown}
-                  onChange={() => {}}
-                  preview={true}
-                />
-              </div>
             </div>
           </MarkdownSection>
         )}
@@ -446,20 +506,10 @@ const App: React.FC = () => {
         {/* 補足説明 */}
         {activeTab === 'all' && (
           <MarkdownSection title="補足説明" icon={FileText}>
-            <div className="space-y-4">
-              <MarkdownEditorDemo
-                value={supplementMarkdown}
-                onChange={setSupplementMarkdown}
-              />
-              <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">プレビュー:</h3>
-                <MarkdownEditorDemo
-                  value={supplementMarkdown}
-                  onChange={() => {}}
-                  preview={true}
-                />
-              </div>
-            </div>
+            <MarkdownEditorDemo
+              value={supplementMarkdown}
+              onChange={setSupplementMarkdown}
+            />
           </MarkdownSection>
         )}
       </div>
