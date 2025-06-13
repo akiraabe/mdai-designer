@@ -77,12 +77,11 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     return data;
   }, [data]);
   
-  // キー生成（安定化）
+  // チカチカ最小限でデータ更新を確実に（シート名変更時のみキー更新）
   const componentKey = useMemo(() => {
-    const name = validData?.[0]?.name || 'default';
-    const cellCount = validData?.[0]?.celldata?.length || 0;
-    return `workbook-${name}-${cellCount}`;
-  }, [validData?.[0]?.name, validData?.[0]?.celldata?.length]);
+    const sheetName = validData?.[0]?.name || 'default';
+    return `workbook-${sheetName}`;
+  }, [validData?.[0]?.name]);
   
   return (
     <div style={{ height: '500px', width: '100%' }}>
@@ -91,6 +90,9 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px' }}>
           ✅ 編集内容は自動保存されます
         </span>
+      </div>
+      <div style={{ fontSize: '10px', color: 'red', marginBottom: '4px' }}>
+        デバッグ: {JSON.stringify(validData?.[0]?.celldata?.slice(0, 2))}
       </div>
       <Workbook
         ref={workbookRef}
@@ -144,21 +146,39 @@ const MarkdownSection: React.FC<{
   </div>
 ));
 
-// 読み込みテスト用の固定データ（大幅に異なるデータ）
+// テストデータ用の固定データ（紫ボタン用）
 const testData = [
   {
-    name: "🔥緊急データ🔥",
+    name: "🟣テストデータ🟣",
     celldata: [
-      { r: 0, c: 0, v: { v: '緊急', ct: { fa: 'General', t: 'g' } } },
-      { r: 0, c: 1, v: { v: 'データ', ct: { fa: 'General', t: 'g' } } },
-      { r: 0, c: 2, v: { v: '更新', ct: { fa: 'General', t: 'g' } } },
-      { r: 1, c: 0, v: { v: '100', ct: { fa: 'General', t: 'g' } } },
-      { r: 1, c: 1, v: { v: '200', ct: { fa: 'General', t: 'g' } } },
-      { r: 1, c: 2, v: { v: '300', ct: { fa: 'General', t: 'g' } } },
-      { r: 2, c: 0, v: { v: '✅成功', ct: { fa: 'General', t: 'g' } } },
-      { r: 2, c: 1, v: { v: '❌失敗', ct: { fa: 'General', t: 'g' } } },
-      { r: 2, c: 2, v: { v: '⚠️注意', ct: { fa: 'General', t: 'g' } } }
-    ]
+      { r: 0, c: 0, v: { v: '項目名', ct: { fa: 'General', t: 'g' } } },
+      { r: 0, c: 1, v: { v: '型', ct: { fa: 'General', t: 'g' } } },
+      { r: 0, c: 2, v: { v: '必須', ct: { fa: 'General', t: 'g' } } },
+      { r: 0, c: 3, v: { v: '説明', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 0, v: { v: 'ユーザーID', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 1, v: { v: 'string', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 2, v: { v: '○', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 3, v: { v: 'システム内で一意の識別子', ct: { fa: 'General', t: 'g' } } },
+      { r: 2, c: 0, v: { v: 'ユーザー名', ct: { fa: 'General', t: 'g' } } },
+      { r: 2, c: 1, v: { v: 'string', ct: { fa: 'General', t: 'g' } } },
+      { r: 2, c: 2, v: { v: '○', ct: { fa: 'General', t: 'g' } } },
+      { r: 2, c: 3, v: { v: '表示用のユーザー名', ct: { fa: 'General', t: 'g' } } },
+      { r: 3, c: 0, v: { v: 'メールアドレス', ct: { fa: 'General', t: 'g' } } },
+      { r: 3, c: 1, v: { v: 'email', ct: { fa: 'General', t: 'g' } } },
+      { r: 3, c: 2, v: { v: '○', ct: { fa: 'General', t: 'g' } } },
+      { r: 3, c: 3, v: { v: 'ログイン用メールアドレス', ct: { fa: 'General', t: 'g' } } },
+      { r: 4, c: 0, v: { v: '権限レベル', ct: { fa: 'General', t: 'g' } } },
+      { r: 4, c: 1, v: { v: 'number', ct: { fa: 'General', t: 'g' } } },
+      { r: 4, c: 2, v: { v: '○', ct: { fa: 'General', t: 'g' } } },
+      { r: 4, c: 3, v: { v: '1:一般, 2:管理者, 3:システム管理者', ct: { fa: 'General', t: 'g' } } },
+      { r: 5, c: 0, v: { v: '最終ログイン', ct: { fa: 'General', t: 'g' } } },
+      { r: 5, c: 1, v: { v: 'datetime', ct: { fa: 'General', t: 'g' } } },
+      { r: 5, c: 2, v: { v: '×', ct: { fa: 'General', t: 'g' } } },
+      { r: 5, c: 3, v: { v: '最後にログインした日時', ct: { fa: 'General', t: 'g' } } }
+    ],
+    row: 100,
+    column: 26,
+    order: 0
   }
 ];
 
@@ -435,8 +455,16 @@ const App: React.FC = () => {
               onClick={() => {
                 console.log('🔄 テストデータボタンクリック - データ変更開始');
                 console.log('🔄 変更前:', spreadsheetData[0]?.name);
-                setSpreadsheetData([...testData]);
-                console.log('🔄 変更後:', testData[0]?.name);
+                console.log('🔄 変更前セル数:', spreadsheetData[0]?.celldata?.length);
+                
+                // テストデータを新しいインスタンスとして作成
+                const newTestData = JSON.parse(JSON.stringify(testData));
+                console.log('🔄 新しいテストデータ:', newTestData[0]?.name);
+                console.log('🔄 新しいセル数:', newTestData[0]?.celldata?.length);
+                
+                // 直接状態を更新（useEffectでWorkbook APIが呼ばれる）
+                setSpreadsheetData(newTestData);
+                console.log('🔄 データ変更完了');
               }}
               style={{
                 display: 'flex',

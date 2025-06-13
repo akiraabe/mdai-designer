@@ -66,3 +66,44 @@ interface DocumentData {
 ### 日本語対応
 - UIは日本語で構築
 - ドキュメント管理は日本語環境向け
+
+## 重要：Fortune-Sheetコンポーネントのチカチカ問題対策
+
+### 問題概要
+Fortune-Sheetコンポーネント（SpreadsheetEditor）でデータを更新する際、keyプロパティが変更されるとコンポーネントが再マウントされ、画面がチカチカする問題が発生する。
+
+### 対策（必須）
+1. **keyプロパティは絶対に固定化**
+   ```typescript
+   // ❌ 絶対にやってはいけない
+   const componentKey = useMemo(() => {
+     return `workbook-${Date.now()}`;
+   }, [data]);
+   
+   // ✅ 正しい方法
+   const componentKey = 'workbook-fixed-key';
+   ```
+
+2. **データ更新はWorkbook APIを使用**
+   ```typescript
+   // useEffectでWorkbook APIを使って直接データ更新
+   useEffect(() => {
+     if (workbookRef.current && validData && validData.length > 0) {
+       workbookRef.current.setData(validData);
+     }
+   }, [validData]);
+   ```
+
+3. **状態更新は直接実行**
+   ```typescript
+   // ❌ setTimeout等の遅延処理は不要
+   setTimeout(() => setSpreadsheetData(newData), 50);
+   
+   // ✅ 直接更新
+   setSpreadsheetData(newData);
+   ```
+
+### 再発防止策
+- **必ず**この対策を適用すること
+- 新しい開発者がこの問題に遭遇した場合、このドキュメントを参照させること
+- コードレビュー時にkeyプロパティの変更がないことを確認すること
