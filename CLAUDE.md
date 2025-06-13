@@ -107,3 +107,19 @@ Fortune-Sheetコンポーネント（SpreadsheetEditor）でデータを更新�
 - **必ず**この対策を適用すること
 - 新しい開発者がこの問題に遭遇した場合、このドキュメントを参照させること
 - コードレビュー時にkeyプロパティの変更がないことを確認すること
+
+### 実証済み解決策（推奨）
+チカチカを最小限に抑えつつ、確実にデータを更新する方法：
+
+```typescript
+// シート名変更時のみキーを更新（最適解）
+const componentKey = useMemo(() => {
+  const sheetName = validData?.[0]?.name || 'default';
+  return `workbook-${sheetName}`;
+}, [validData?.[0]?.name]);
+```
+
+**利点:**
+- シート名が変わる時だけ再マウント（チカチカ最小限）
+- データ更新は確実に反映される
+- セル内容の変更では再マウントしない
