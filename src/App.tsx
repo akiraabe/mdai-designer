@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useMemo } from 'react';
 import { Upload, FileText, Image, Table, Save } from 'lucide-react';
 import './App.css'
 
@@ -13,7 +13,7 @@ import '@uiw/react-md-editor/markdown-editor.css';
 import { useFileOperations } from './hooks/useFileOperations';
 import { useSpreadsheetOperations } from './hooks/useSpreadsheetOperations';
 import { useTabNavigation } from './hooks/useTabNavigation';
-import { initialConditionsMarkdown, initialSupplementMarkdown, initialSpreadsheetData } from './hooks/useInitialData';
+import { useDocumentState } from './hooks/useDocumentState';
 
 // 型定義
 interface DocumentData {
@@ -158,12 +158,17 @@ const App: React.FC = () => {
   // タブナビゲーションフック
   const { activeTab, setActiveTab } = useTabNavigation();
   
-  // Markdownとスプレッドシートの状態（初期データ使用）
-  const [conditionsMarkdown, setConditionsMarkdown] = useState<string>(initialConditionsMarkdown);
-  const [supplementMarkdown, setSupplementMarkdown] = useState<string>(initialSupplementMarkdown);
-  const [spreadsheetData, setSpreadsheetData] = useState(initialSpreadsheetData);
-
-  const [mockupImage, setMockupImage] = useState<string | null>(null);
+  // ドキュメント状態フック
+  const {
+    conditionsMarkdown,
+    supplementMarkdown,
+    spreadsheetData,
+    mockupImage,
+    setConditionsMarkdown,
+    setSupplementMarkdown,
+    setSpreadsheetData,
+    setMockupImage,
+  } = useDocumentState();
 
   // ファイル操作フック
   const {
