@@ -195,7 +195,7 @@ const App: React.FC = () => {
             setConditionsMarkdown(docData.conditions || '');
             setSupplementMarkdown(docData.supplement || '');
             
-            // Fortune-Sheetは配列形式が必要
+            // Fortune-Sheetデータをそのまま使用
             let spreadsheetArray;
             if (Array.isArray(docData.spreadsheet)) {
               spreadsheetArray = docData.spreadsheet;
@@ -206,8 +206,8 @@ const App: React.FC = () => {
               spreadsheetArray = [];
             }
             
-            console.log('setSpreadsheetDataに渡すデータ:', spreadsheetArray);
-            console.log('Fortune-Sheetに復元:', JSON.stringify(spreadsheetArray, null, 2));
+            console.log('変換前のdocData.spreadsheet:', JSON.stringify(docData.spreadsheet, null, 2));
+            console.log('変換後のspreadsheetArray:', JSON.stringify(spreadsheetArray, null, 2));
             setSpreadsheetData(spreadsheetArray);
             setMockupImage(docData.mockup || null);
             
