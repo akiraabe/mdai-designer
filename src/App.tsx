@@ -34,12 +34,21 @@ interface SpreadsheetEditorProps {
   data: any;
 }
 
+// Fortune-Sheetインスタンスへの参照を保持するためのref
+let fortuneSheetInstance: any = null;
+
 const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({ 
   data
 }) => {
   console.log('📊 SpreadsheetEditor受信:', data?.[0]?.name);
   
-  // 安定したキーでWorkbookを作成（Date.now()を削除）
+  // Fortune-Sheetの変更を監視
+  const handleChange = useCallback((sheets: any) => {
+    console.log('📝 Fortune-Sheet内部変更:', sheets);
+    fortuneSheetInstance = sheets;
+  }, []);
+  
+  // 安定したキーでWorkbookを作成
   const stableKey = `${data?.[0]?.name}-${data?.[0]?.celldata?.length}`;
   
   return (
@@ -50,10 +59,16 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       <Workbook
         key={stableKey}
         data={data}
+        onChange={handleChange}
         lang="en"
       />
     </div>
   );
+};
+
+// Fortune-Sheetから現在のデータを取得する関数
+const getCurrentSpreadsheetData = () => {
+  return fortuneSheetInstance || [];
 };
 
 // 本格的なMarkdownエディタ
@@ -180,10 +195,13 @@ const App: React.FC = () => {
 
   const handleSave = useCallback(() => {
     console.log('💾 保存実行');
+    const currentSpreadsheetData = getCurrentSpreadsheetData();
+    console.log('💾 保存するスプレッドシートデータ:', currentSpreadsheetData);
+    
     const docData: DocumentData = {
       conditions: conditionsMarkdown,
       supplement: supplementMarkdown,
-      spreadsheet: spreadsheetData,
+      spreadsheet: currentSpreadsheetData,
       mockup: mockupImage,
       timestamp: new Date().toISOString()
     };
