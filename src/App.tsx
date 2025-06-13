@@ -46,7 +46,7 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = React.memo(({
         onChange={onChange}
         showToolbar={true}
         showSheetTabs={true}
-        lang="zh"
+        lang="en"
       />
     </div>
   );
