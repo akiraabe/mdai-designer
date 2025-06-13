@@ -35,14 +35,37 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   onDataChange
 }) => {
   const workbookRef = useRef<any>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
   
-  // データの検証と正規化関数
-  const validateAndNormalizeData = useCallback((inputData: any) => {
-    console.log('🔍 データ検証開始:', inputData);
+  // データの詳細ログ出力
+  useEffect(() => {
+    console.log('📊 SpreadsheetEditor データ受信:', {
+      hasData: !!data,
+      isArray: Array.isArray(data),
+      length: data?.length,
+      firstSheet: data?.[0],
+      sheetName: data?.[0]?.name,
+      cellCount: data?.[0]?.celldata?.length,
+      firstFewCells: data?.[0]?.celldata?.slice(0, 3)
+    });
+  }, [data]);
+  
+  // onChangeハンドラー
+  const handleChange = useCallback((sheets: any) => {
+    console.log('📝 Fortune-Sheet変更検出:', {
+      sheetName: sheets?.[0]?.name,
+      cellCount: sheets?.[0]?.celldata?.length
+    });
     
-    if (!Array.isArray(inputData) || inputData.length === 0) {
-      console.warn('⚠️ 無効なデータ構造、デフォルトシートを作成');
+    if (sheets && sheets.length > 0) {
+      console.log('📤 データを親コンポーネントに同期');
+      onDataChange(sheets);
+    }
+  }, [onDataChange]);
+  
+  // データが無効な場合のフォールバック
+  const validData = useMemo(() => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.warn('⚠️ 無効なデータ、デフォルトシートを使用');
       return [{
         name: "Sheet1",
         celldata: [],
@@ -51,73 +74,20 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         order: 0
       }];
     }
-    
-    return inputData.map((sheet: any, index: number) => {
-      const normalizedSheet = {
-        name: sheet.name || `Sheet${index + 1}`,
-        celldata: Array.isArray(sheet.celldata) ? sheet.celldata : [],
-        row: sheet.row || 100,
-        column: sheet.column || 26,
-        order: sheet.order !== undefined ? sheet.order : index,
-        ...sheet // 他のプロパティも保持
-      };
-      
-      console.log(`✅ シート${index}正規化完了:`, {
-        name: normalizedSheet.name,
-        cellCount: normalizedSheet.celldata.length
-      });
-      
-      return normalizedSheet;
-    });
-  }, []);
-
-  // 正規化されたデータを生成
-  const normalizedData = useMemo(() => {
-    console.log('📊 SpreadsheetEditor データ更新:', {
-      newData: data?.[0]?.name,
-      cellCount: data?.[0]?.celldata?.length,
-      isValidArray: Array.isArray(data)
-    });
-    
-    return validateAndNormalizeData(data);
-  }, [data, validateAndNormalizeData]);
+    return data;
+  }, [data]);
   
-  // onChangeハンドラー（無限ループを防ぐ）
-  const handleChange = useCallback((sheets: any) => {
-    console.log('📝 Fortune-Sheet変更検出:', {
-      sheetName: sheets?.[0]?.name,
-      cellCount: sheets?.[0]?.celldata?.length,
-      totalSheets: sheets?.length,
-      isInitialized
-    });
-    
-    // 初期化完了後のみ親に通知（無限ループ防止）
-    if (isInitialized && sheets && sheets.length > 0) {
-      console.log('📤 データを親コンポーネントに自動同期');
-      onDataChange(sheets);
-    }
-  }, [onDataChange, isInitialized]);
-
-  // 初期化完了を遅延設定
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialized(true);
-      console.log('✅ SpreadsheetEditor 初期化完了');
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
-  // 安定したキーを生成
+  // キー生成（安定化）
   const componentKey = useMemo(() => {
-    const dataHash = normalizedData?.[0]?.name + '-' + normalizedData?.[0]?.celldata?.length;
-    return `workbook-${dataHash}`;
-  }, [normalizedData?.[0]?.name, normalizedData?.[0]?.celldata?.length]);
+    const name = validData?.[0]?.name || 'default';
+    const cellCount = validData?.[0]?.celldata?.length || 0;
+    return `workbook-${name}-${cellCount}`;
+  }, [validData?.[0]?.name, validData?.[0]?.celldata?.length]);
   
   return (
     <div style={{ height: '500px', width: '100%' }}>
       <div style={{ fontSize: '12px', color: 'blue', marginBottom: '4px' }}>
-        現在: {normalizedData?.[0]?.name} (セル数: {normalizedData?.[0]?.celldata?.length})
+        現在: {validData?.[0]?.name} (セル数: {validData?.[0]?.celldata?.length})
         <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px' }}>
           ✅ 編集内容は自動保存されます
         </span>
@@ -125,7 +95,7 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       <Workbook
         ref={workbookRef}
         key={componentKey}
-        data={normalizedData}
+        data={validData}
         onChange={handleChange}
         lang="en"
       />
@@ -292,13 +262,6 @@ const App: React.FC = () => {
             // データを復元（詳細ログ付き）
             console.log('📂 読み込み完了 - JSONからスプレッドシートデータを復元');
             console.log('📂 復元するスプレッドシートデータ:', docData.spreadsheet);
-            console.log('📂 スプレッドシートデータ構造:', {
-              isArray: Array.isArray(docData.spreadsheet),
-              length: docData.spreadsheet?.length,
-              firstSheet: docData.spreadsheet?.[0],
-              firstSheetName: docData.spreadsheet?.[0]?.name,
-              firstSheetCellCount: docData.spreadsheet?.[0]?.celldata?.length
-            });
             
             // データ型を確認・修正
             let spreadsheetToRestore = docData.spreadsheet;
@@ -307,24 +270,86 @@ const App: React.FC = () => {
               spreadsheetToRestore = [];
             }
             
-            // 各シートの構造を確認
-            if (spreadsheetToRestore.length > 0) {
-              spreadsheetToRestore.forEach((sheet: any, index: number) => {
-                console.log(`📂 シート${index}:`, {
-                  name: sheet?.name,
-                  celldata: sheet?.celldata,
-                  celldataLength: sheet?.celldata?.length,
-                  hasValidStructure: sheet?.celldata && Array.isArray(sheet.celldata)
-                });
+            // Fortune-Sheet用にデータ構造を修正
+            // 保存時は 'data' プロパティに変更されるが、初期化時は 'celldata' が必要
+            const normalizedSheets = spreadsheetToRestore.map((sheet: any, index: number) => {
+              console.log(`📂 シート${index} 変換前:`, {
+                name: sheet?.name,
+                hasData: !!sheet?.data,
+                hasCelldata: !!sheet?.celldata,
+                dataLength: sheet?.data?.length,
+                celldataLength: sheet?.celldata?.length
               });
-            }
+              
+              // dataプロパティがある場合はcelldataに変換
+              let celldata = sheet?.celldata || [];
+              if (sheet?.data && Array.isArray(sheet.data)) {
+                // dataからcelldataに変換（Fortune-Sheetの実際の形式に対応）
+                celldata = [];
+                sheet.data.forEach((row: any[], rowIndex: number) => {
+                  if (Array.isArray(row)) {
+                    row.forEach((cell: any, colIndex: number) => {
+                      if (cell !== null && cell !== undefined) {
+                        // セルがオブジェクト形式の場合（Fortune-Sheetの実際の形式）
+                        if (typeof cell === 'object' && cell.v !== undefined) {
+                          celldata.push({
+                            r: rowIndex,
+                            c: colIndex,
+                            v: {
+                              v: cell.v,
+                              m: cell.m || cell.v,
+                              ct: cell.ct || { fa: 'General', t: 'g' }
+                            }
+                          });
+                        }
+                        // セルが単純な値の場合
+                        else if (cell !== '') {
+                          celldata.push({
+                            r: rowIndex,
+                            c: colIndex,
+                            v: {
+                              v: cell,
+                              m: cell,
+                              ct: { fa: 'General', t: 'g' }
+                            }
+                          });
+                        }
+                      }
+                    });
+                  }
+                });
+                console.log(`📂 シート${index} data→celldata変換完了:`, celldata.length);
+                console.log(`📂 変換されたcelldata:`, celldata.slice(0, 3));
+              }
+              
+              const normalizedSheet = {
+                name: sheet.name || `Sheet${index + 1}`,
+                row: sheet.row || 100,
+                column: sheet.column || 26,
+                order: sheet.order !== undefined ? sheet.order : index,
+                // その他のプロパティも保持
+                ...sheet,
+                // celldataを確実に設定（最後に配置して上書き）
+                celldata: celldata
+              };
+              
+              console.log(`📂 シート${index} 変換後:`, {
+                name: normalizedSheet.name,
+                celldataLength: normalizedSheet.celldata.length,
+                sampleCells: normalizedSheet.celldata.slice(0, 3)
+              });
+              
+              return normalizedSheet;
+            });
+            
+            console.log('📂 最終的なスプレッドシートデータ:', normalizedSheets);
             
             setConditionsMarkdown(docData.conditions || '');
             setSupplementMarkdown(docData.supplement || '');
-            setSpreadsheetData(spreadsheetToRestore);
+            setSpreadsheetData(normalizedSheets);
             setMockupImage(docData.mockup || null);
             
-            alert(`設計書を読み込みました！\nスプレッドシート: ${spreadsheetToRestore.length}シート`);
+            alert(`設計書を読み込みました！\nスプレッドシート: ${normalizedSheets.length}シート\nセル数: ${normalizedSheets[0]?.celldata?.length || 0}`);
           }
         } catch (error) {
           alert('JSONファイルの読み込みに失敗しました。');
