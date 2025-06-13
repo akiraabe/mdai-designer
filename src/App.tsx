@@ -12,6 +12,8 @@ import '@uiw/react-md-editor/markdown-editor.css';
 // カスタムフック
 import { useFileOperations } from './hooks/useFileOperations';
 import { useSpreadsheetOperations } from './hooks/useSpreadsheetOperations';
+import { useTabNavigation } from './hooks/useTabNavigation';
+import { initialConditionsMarkdown, initialSupplementMarkdown, initialSpreadsheetData } from './hooks/useInitialData';
 
 // 型定義
 interface DocumentData {
@@ -153,50 +155,13 @@ const MarkdownSection: React.FC<{
 
 // メインコンポーネント
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('all');
+  // タブナビゲーションフック
+  const { activeTab, setActiveTab } = useTabNavigation();
   
-  // 表示条件のMarkdown
-  const [conditionsMarkdown, setConditionsMarkdown] = useState<string>(`## 表示条件
-
-### アクセス権限
-- ログイン済みユーザーのみアクセス可能
-- 管理者権限保持者は全ユーザー閲覧可能
-- 一般ユーザーは自分の情報のみ閲覧可能
-
-### 表示ルール
-- データが存在しない場合は「データなし」を表示
-- 権限不足の場合は403エラーページにリダイレクト`);
-
-  // 補足説明のMarkdown
-  const [supplementMarkdown, setSupplementMarkdown] = useState<string>(`## 補足説明
-
-### データフロー
-1. 認証情報の確認
-2. 権限レベルの判定
-3. 適切なユーザーデータの取得
-4. 画面への反映
-
-### エラーハンドリング
-- 権限不足: 403エラーページにリダイレクト
-- データ取得失敗: エラーメッセージを表示
-- ネットワークエラー: 再試行ボタンを表示
-
-### パフォーマンス考慮
-- 大量データの場合はページネーション実装
-- キャッシュ機能により応答速度向上`);
-
-  // スプレッドシートデータ - 超シンプルテスト
-  const [spreadsheetData, setSpreadsheetData] = useState([
-    {
-      name: "項目定義",
-      celldata: [
-        { r: 0, c: 0, v: { v: 'A1', ct: { fa: 'General', t: 'g' } } },
-        { r: 0, c: 1, v: { v: 'B1', ct: { fa: 'General', t: 'g' } } },
-        { r: 1, c: 0, v: { v: 'A2', ct: { fa: 'General', t: 'g' } } },
-        { r: 1, c: 1, v: { v: 'B2', ct: { fa: 'General', t: 'g' } } }
-      ]
-    }
-  ]);
+  // Markdownとスプレッドシートの状態（初期データ使用）
+  const [conditionsMarkdown, setConditionsMarkdown] = useState<string>(initialConditionsMarkdown);
+  const [supplementMarkdown, setSupplementMarkdown] = useState<string>(initialSupplementMarkdown);
+  const [spreadsheetData, setSpreadsheetData] = useState(initialSpreadsheetData);
 
   const [mockupImage, setMockupImage] = useState<string | null>(null);
 
