@@ -29,7 +29,7 @@ interface TabInfo {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-// 本格的なFortune-Sheetコンポーネント
+// Fortune-Sheetコンポーネント（celldata形式対応）
 interface SpreadsheetEditorProps {
   data: any;
   onChange: (data: any) => void;
@@ -39,13 +39,14 @@ const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = React.memo(({
   data, 
   onChange 
 }) => {
+  console.log('SpreadsheetEditor received data:', data);
+  console.log('Data structure:', JSON.stringify(data, null, 2));
+  
   return (
     <div style={{ height: '500px', width: '100%' }}>
       <Workbook
         data={data}
         onChange={onChange}
-        showToolbar={true}
-        showSheetTabs={true}
         lang="en"
       />
     </div>
@@ -127,47 +128,18 @@ const App: React.FC = () => {
 - 大量データの場合はページネーション実装
 - キャッシュ機能により応答速度向上`);
 
-  // スプレッドシートデータ（Fortune-Sheet形式）
+  // スプレッドシートデータ（Fortune-Sheet celldata形式）
   const [spreadsheetData, setSpreadsheetData] = useState([
     {
       name: "項目定義",
-      data: [
-        [
-          { v: '項目名', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
-          { v: '型', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
-          { v: '必須', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
-          { v: '最大長', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
-          { v: '説明', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 },
-          { v: '備考', ct: { fa: 'General' }, bg: '#e6f3ff', fc: '#003d82', bl: 1 }
-        ],
-        [
-          { v: 'ユーザーID' }, { v: 'String' }, { v: '○' }, { v: '20' }, 
-          { v: '一意識別子' }, { v: 'UUID形式' }
-        ],
-        [
-          { v: 'ユーザー名' }, { v: 'String' }, { v: '○' }, { v: '50' }, 
-          { v: '表示名' }, { v: '' }
-        ],
-        [
-          { v: 'メールアドレス' }, { v: 'String' }, { v: '○' }, { v: '100' }, 
-          { v: 'ログイン用' }, { v: 'RFC準拠' }
-        ],
-        [
-          { v: 'パスワード' }, { v: 'String' }, { v: '○' }, { v: '128' }, 
-          { v: 'ハッシュ化済み' }, { v: 'bcrypt' }
-        ],
-        [
-          { v: '作成日時' }, { v: 'DateTime' }, { v: '○' }, { v: '' }, 
-          { v: '登録日時' }, { v: 'ISO8601' }
-        ],
-        [
-          { v: '更新日時' }, { v: 'DateTime' }, { v: '○' }, { v: '' }, 
-          { v: '最終更新' }, { v: 'ISO8601' }
-        ]
-      ],
-      config: {
-        columnlen: { 0: 120, 1: 80, 2: 60, 3: 80, 4: 150, 5: 120 }
-      }
+      celldata: [
+        { r: 0, c: 0, v: { v: '項目名', ct: { fa: 'General', t: 'g' } } },
+        { r: 0, c: 1, v: { v: '型', ct: { fa: 'General', t: 'g' } } },
+        { r: 0, c: 2, v: { v: '必須', ct: { fa: 'General', t: 'g' } } },
+        { r: 1, c: 0, v: { v: 'ユーザーID', ct: { fa: 'General', t: 'g' } } },
+        { r: 1, c: 1, v: { v: 'String', ct: { fa: 'General', t: 'g' } } },
+        { r: 1, c: 2, v: { v: '○', ct: { fa: 'General', t: 'g' } } }
+      ]
     }
   ]);
 
@@ -188,6 +160,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleSave = useCallback(() => {
+    console.log('保存時のspreadsheetData:', spreadsheetData);
     const docData: DocumentData = {
       conditions: conditionsMarkdown,
       supplement: supplementMarkdown,
@@ -218,9 +191,24 @@ const App: React.FC = () => {
             const docData: DocumentData = JSON.parse(result);
             
             // データを復元
+            console.log('読み込み時のdocData.spreadsheet:', docData.spreadsheet);
             setConditionsMarkdown(docData.conditions || '');
             setSupplementMarkdown(docData.supplement || '');
-            setSpreadsheetData(docData.spreadsheet || []);
+            
+            // Fortune-Sheetは配列形式が必要
+            let spreadsheetArray;
+            if (Array.isArray(docData.spreadsheet)) {
+              spreadsheetArray = docData.spreadsheet;
+            } else if (docData.spreadsheet && typeof docData.spreadsheet === 'object') {
+              // 単一オブジェクトの場合は配列に変換
+              spreadsheetArray = [docData.spreadsheet];
+            } else {
+              spreadsheetArray = [];
+            }
+            
+            console.log('setSpreadsheetDataに渡すデータ:', spreadsheetArray);
+            console.log('Fortune-Sheetに復元:', JSON.stringify(spreadsheetArray, null, 2));
+            setSpreadsheetData(spreadsheetArray);
             setMockupImage(docData.mockup || null);
             
             alert('設計書を読み込みました！');
