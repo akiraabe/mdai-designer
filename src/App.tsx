@@ -6,8 +6,8 @@ import './App.css'
 // 実際の環境では以下のimportを使用
 // import { Workbook } from '@fortune-sheet/react';
 // import '@fortune-sheet/react/dist/index.css';
-// import MDEditor from '@uiw/react-md-editor';
-// import '@uiw/react-md-editor/markdown-editor.css';
+import MDEditor from '@uiw/react-md-editor';
+import '@uiw/react-md-editor/markdown-editor.css';
 
 // 型定義
 interface CellPosition {
@@ -155,108 +155,26 @@ const FortuneSheetDemo: React.FC<FortuneSheetDemoProps> = ({
   );
 };
 
-// Markdownエディタの代替実装（デモ用）
-interface MarkdownEditorDemoProps {
+// 本格的なMarkdownエディタ
+interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-const MarkdownEditorDemo: React.FC<MarkdownEditorDemoProps> = React.memo(({ 
+const MarkdownEditor: React.FC<MarkdownEditorProps> = React.memo(({ 
   value, 
   onChange
 }) => {
-  const [isPreview, setIsPreview] = useState(false);
-  const [cursorPosition, setCursorPosition] = useState(0);
-  const [textareaHeight, setTextareaHeight] = useState(256); // 初期高さ256px
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-  // カーソル位置追跡とサイズ記録
-  const handleSelectionChange = useCallback(() => {
-    if (textareaRef.current) {
-      setCursorPosition(textareaRef.current.selectionStart);
-      setTextareaHeight(textareaRef.current.offsetHeight);
-    }
-  }, []);
-
-  // HTML変換（プレビュー時のみ実行）
-  const renderedHTML = React.useMemo(() => {
-    if (!isPreview) return '';
-    
-    let html = value;
-    
-    // 1. 見出しを処理
-    html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-3 mb-2">$1</h3>');
-    html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-4 mb-2">$1</h2>');
-    
-    // 2. リストを処理
-    html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>');
-    
-    // 3. 太字を処理
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    
-    // 4. 改行を処理（最後に）
-    html = html.replace(/\n/g, '<br>');
-    
-    return html;
-  }, [value, isPreview]);
-
   return (
-    <div className="space-y-2">
-      {/* トグルボタン */}
-      <div className="flex items-center space-x-2">
-        <button
-          onClick={() => setIsPreview(false)}
-          className={`px-3 py-1 text-sm rounded ${
-            !isPreview 
-              ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          編集
-        </button>
-        <button
-          onClick={() => setIsPreview(true)}
-          className={`px-3 py-1 text-sm rounded ${
-            isPreview 
-              ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-              : 'text-gray-600 hover:text-gray-800'
-          }`}
-        >
-          プレビュー
-        </button>
-        {!isPreview && (
-          <span className="text-xs text-gray-500 ml-4">
-            カーソル位置: {cursorPosition} | 文字数: {value.length}
-          </span>
-        )}
-      </div>
-
-      {/* コンテンツ */}
-      {isPreview ? (
-        <div 
-          className="prose max-w-none p-4 border rounded-lg bg-white overflow-auto"
-          style={{ height: `${textareaHeight}px` }}
-        >
-          <div dangerouslySetInnerHTML={{ __html: renderedHTML }} />
-        </div>
-      ) : (
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onSelect={handleSelectionChange}
-          onKeyUp={handleSelectionChange}
-          onClick={handleSelectionChange}
-          className="w-full p-3 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Markdownで記述してください..."
-          style={{
-            caretColor: 'red',
-            fontSize: '16px',
-            lineHeight: '1.5',
-            height: `${textareaHeight}px`
-          }}
-        />
-      )}
+    <div data-color-mode="light">
+      <MDEditor
+        value={value}
+        onChange={(val) => onChange(val || '')}
+        height={400}
+        preview="edit"
+        hideToolbar={false}
+        data-color-mode="light"
+      />
     </div>
   );
 });
@@ -420,7 +338,7 @@ const App: React.FC = () => {
                 <span className="text-sm text-gray-600">編集可能なMarkdown形式</span>
                 <span className="text-xs text-gray-400">## で見出し、- でリスト</span>
               </div>
-              <MarkdownEditorDemo
+              <MarkdownEditor
                 value={conditionsMarkdown}
                 onChange={setConditionsMarkdown}
               />
@@ -506,7 +424,7 @@ const App: React.FC = () => {
         {/* 補足説明 */}
         {activeTab === 'all' && (
           <MarkdownSection title="補足説明" icon={FileText}>
-            <MarkdownEditorDemo
+            <MarkdownEditor
               value={supplementMarkdown}
               onChange={setSupplementMarkdown}
             />
