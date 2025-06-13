@@ -32,26 +32,29 @@ interface TabInfo {
 // Fortune-Sheetコンポーネント（celldata形式対応）
 interface SpreadsheetEditorProps {
   data: any;
-  onChange: (data: any) => void;
 }
 
-const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = React.memo(({ 
-  data, 
-  onChange 
+const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({ 
+  data
 }) => {
-  console.log('SpreadsheetEditor received data:', data);
-  console.log('Data structure:', JSON.stringify(data, null, 2));
+  console.log('📊 SpreadsheetEditor受信:', data?.[0]?.name);
+  
+  // 安定したキーでWorkbookを作成（Date.now()を削除）
+  const stableKey = `${data?.[0]?.name}-${data?.[0]?.celldata?.length}`;
   
   return (
     <div style={{ height: '500px', width: '100%' }}>
+      <div style={{ fontSize: '12px', color: 'red', marginBottom: '4px' }}>
+        現在: {data?.[0]?.name} (セル数: {data?.[0]?.celldata?.length})
+      </div>
       <Workbook
+        key={stableKey}
         data={data}
-        onChange={onChange}
         lang="en"
       />
     </div>
   );
-});
+};
 
 // 本格的なMarkdownエディタ
 interface MarkdownEditorProps {
@@ -94,6 +97,24 @@ const MarkdownSection: React.FC<{
   </div>
 ));
 
+// 読み込みテスト用の固定データ（大幅に異なるデータ）
+const testData = [
+  {
+    name: "🔥緊急データ🔥",
+    celldata: [
+      { r: 0, c: 0, v: { v: '緊急', ct: { fa: 'General', t: 'g' } } },
+      { r: 0, c: 1, v: { v: 'データ', ct: { fa: 'General', t: 'g' } } },
+      { r: 0, c: 2, v: { v: '更新', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 0, v: { v: '100', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 1, v: { v: '200', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 2, v: { v: '300', ct: { fa: 'General', t: 'g' } } },
+      { r: 2, c: 0, v: { v: '✅成功', ct: { fa: 'General', t: 'g' } } },
+      { r: 2, c: 1, v: { v: '❌失敗', ct: { fa: 'General', t: 'g' } } },
+      { r: 2, c: 2, v: { v: '⚠️注意', ct: { fa: 'General', t: 'g' } } }
+    ]
+  }
+];
+
 // メインコンポーネント
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -128,17 +149,15 @@ const App: React.FC = () => {
 - 大量データの場合はページネーション実装
 - キャッシュ機能により応答速度向上`);
 
-  // スプレッドシートデータ（Fortune-Sheet celldata形式）
+  // スプレッドシートデータ - 超シンプルテスト
   const [spreadsheetData, setSpreadsheetData] = useState([
     {
       name: "項目定義",
       celldata: [
-        { r: 0, c: 0, v: { v: '項目名', ct: { fa: 'General', t: 'g' } } },
-        { r: 0, c: 1, v: { v: '型', ct: { fa: 'General', t: 'g' } } },
-        { r: 0, c: 2, v: { v: '必須', ct: { fa: 'General', t: 'g' } } },
-        { r: 1, c: 0, v: { v: 'ユーザーID', ct: { fa: 'General', t: 'g' } } },
-        { r: 1, c: 1, v: { v: 'String', ct: { fa: 'General', t: 'g' } } },
-        { r: 1, c: 2, v: { v: '○', ct: { fa: 'General', t: 'g' } } }
+        { r: 0, c: 0, v: { v: 'A1', ct: { fa: 'General', t: 'g' } } },
+        { r: 0, c: 1, v: { v: 'B1', ct: { fa: 'General', t: 'g' } } },
+        { r: 1, c: 0, v: { v: 'A2', ct: { fa: 'General', t: 'g' } } },
+        { r: 1, c: 1, v: { v: 'B2', ct: { fa: 'General', t: 'g' } } }
       ]
     }
   ]);
@@ -160,7 +179,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleSave = useCallback(() => {
-    console.log('保存時のspreadsheetData:', spreadsheetData);
+    console.log('💾 保存実行');
     const docData: DocumentData = {
       conditions: conditionsMarkdown,
       supplement: supplementMarkdown,
@@ -179,9 +198,8 @@ const App: React.FC = () => {
   }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage]);
 
   const handleLoad = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('handleLoad called', e.target.files);
+    console.log('📂 読み込み開始');
     const file = e.target.files?.[0];
-    console.log('Selected file:', file);
     if (file && file.type === 'application/json') {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -191,24 +209,10 @@ const App: React.FC = () => {
             const docData: DocumentData = JSON.parse(result);
             
             // データを復元
-            console.log('読み込み時のdocData.spreadsheet:', docData.spreadsheet);
+            console.log('📂 読み込み完了 - JSONからスプレッドシートデータを復元');
             setConditionsMarkdown(docData.conditions || '');
             setSupplementMarkdown(docData.supplement || '');
-            
-            // Fortune-Sheetデータをそのまま使用
-            let spreadsheetArray;
-            if (Array.isArray(docData.spreadsheet)) {
-              spreadsheetArray = docData.spreadsheet;
-            } else if (docData.spreadsheet && typeof docData.spreadsheet === 'object') {
-              // 単一オブジェクトの場合は配列に変換
-              spreadsheetArray = [docData.spreadsheet];
-            } else {
-              spreadsheetArray = [];
-            }
-            
-            console.log('変換前のdocData.spreadsheet:', JSON.stringify(docData.spreadsheet, null, 2));
-            console.log('変換後のspreadsheetArray:', JSON.stringify(spreadsheetArray, null, 2));
-            setSpreadsheetData(spreadsheetArray);
+            setSpreadsheetData(docData.spreadsheet || []);
             setMockupImage(docData.mockup || null);
             
             alert('設計書を読み込みました！');
@@ -249,12 +253,21 @@ const App: React.FC = () => {
           <div className="flex space-x-3">
             <button
               onClick={() => {
-                console.log('読み込みボタンクリック');
                 const input = document.getElementById('load-json') as HTMLInputElement;
-                console.log('input element:', input);
                 input?.click();
               }}
-              className="flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors border-2 border-orange-800"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px 16px',
+                backgroundColor: '#ea580c',
+                color: 'white',
+                border: '2px solid #c2410c',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
             >
               <Upload className="w-4 h-4 mr-2" />
               読み込み
@@ -268,10 +281,43 @@ const App: React.FC = () => {
             />
             <button
               onClick={handleSave}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px 16px',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
             >
               <Save className="w-4 h-4 mr-2" />
               保存
+            </button>
+            <button
+              onClick={() => {
+                console.log('🔄 テストデータボタンクリック - データ変更開始');
+                console.log('🔄 変更前:', spreadsheetData[0]?.name);
+                setSpreadsheetData([...testData]);
+                console.log('🔄 変更後:', testData[0]?.name);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '8px 16px',
+                backgroundColor: '#9333ea',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              テストデータ
             </button>
           </div>
         </div>
@@ -377,7 +423,6 @@ const App: React.FC = () => {
               
               <SpreadsheetEditor 
                 data={spreadsheetData}
-                onChange={setSpreadsheetData}
               />
               
               <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded">
