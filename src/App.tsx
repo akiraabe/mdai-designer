@@ -199,6 +199,7 @@ const App: React.FC = () => {
         supplementMarkdown={supplementMarkdown}
         spreadsheetData={spreadsheetData}
         mockupImage={mockupImage}
+        onConditionsMarkdownUpdate={setConditionsMarkdown}
       />
     </CopilotKit>
   );
