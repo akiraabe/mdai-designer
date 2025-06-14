@@ -52,6 +52,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   onDataChange
 }) => {
   const workbookRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // データが無効な場合のフォールバック（簡略化して無限ループ防止）
   const validData = useMemo(() => {
@@ -76,8 +77,16 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       name: data?.[0]?.name,
       cellCount: data?.[0]?.celldata?.length,
       hasCelldata: !!data?.[0]?.celldata,
-      hasData: !!data?.[0]?.data
+      hasData: !!data?.[0]?.data,
+      mergeInfo: data?.[0]?.config?.merge
     });
+    
+    // セル結合情報の詳細ログ
+    if (data?.[0]?.config?.merge && Object.keys(data[0].config.merge).length > 0) {
+      console.log('🔗 セル結合情報あり:', data[0].config.merge);
+    } else {
+      console.log('❌ セル結合情報なし');
+    }
     
     // Workbook APIを使ってデータを直接更新（再マウント不要）
     if (workbookRef.current && validData && validData.length > 0) {
@@ -90,6 +99,44 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       }
     }
   }, [data, validData]);
+  
+  // 日本語IME入力対応のイベントハンドラー
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    let isComposing = false;
+    
+    const handleCompositionStart = () => {
+      isComposing = true;
+      console.log('🈶 IME入力開始');
+    };
+    
+    const handleCompositionEnd = () => {
+      isComposing = false;
+      console.log('🈶 IME入力終了');
+    };
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // IME入力中のEnterキーを無視
+      if (isComposing && e.key === 'Enter') {
+        console.log('🈶 IME入力中のEnterキーを無視');
+        e.stopPropagation();
+        return false;
+      }
+    };
+    
+    // スプレッドシート内の入力要素に対してイベントを設定
+    container.addEventListener('compositionstart', handleCompositionStart, true);
+    container.addEventListener('compositionend', handleCompositionEnd, true);
+    container.addEventListener('keydown', handleKeyDown, true);
+    
+    return () => {
+      container.removeEventListener('compositionstart', handleCompositionStart, true);
+      container.removeEventListener('compositionend', handleCompositionEnd, true);
+      container.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, []);
   
   // onChangeハンドラー（書式情報完全保存対応）
   const handleChange = useCallback((sheets: any) => {
@@ -151,6 +198,13 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
             authority: sheet.config?.authority || {}             // シート保護
           }
         };
+        
+        // セル結合情報の変更保存ログ
+        if (normalizedSheet.config?.merge && Object.keys(normalizedSheet.config.merge).length > 0) {
+          console.log('💾 セル結合情報を保存:', normalizedSheet.config.merge);
+        }
+        
+        return normalizedSheet;
       });
       
       // console.log('✅ onDataChangeを呼び出し! セル数:', completeSheets[0]?.celldata?.length);
@@ -178,7 +232,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         order: 0
       }]);
     }}>
-      <div style={{ height: '500px', width: '100%' }}>
+      <div ref={containerRef} style={{ height: '500px', width: '100%' }}>
         <div style={{ fontSize: '12px', color: 'blue', marginBottom: '4px' }}>
           現在: {validData?.[0]?.name} (セル数: {validData?.[0]?.celldata?.length})
           <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px' }}>
@@ -194,6 +248,24 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
           data={validData}
           onChange={handleChange}
           lang="en"
+          options={{
+            // 日本語IME入力対応
+            container: 'luckysheet',
+            allowEdit: true,
+            showinfobar: false,
+            showsheetbar: true,
+            showstatisticBar: false,
+            // IME入力時のエンターキー処理を無効化
+            enableAddRow: false,
+            // セル編集時の詳細設定
+            functionButton: '<i class="fa fa-calculator" aria-hidden="true"></i>',
+            // 日本語入力モード設定
+            editMode: false,
+            // エンターキーでのセル移動を制御
+            allowCopy: true,
+            allowEdit: true,
+            forceCalculation: false
+          }}
         />
       </div>
     </SpreadsheetErrorBoundary>
