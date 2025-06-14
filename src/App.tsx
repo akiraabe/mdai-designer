@@ -1,6 +1,13 @@
 // src/App.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import './App.css';
+import { MessageCircle } from 'lucide-react';
+
+// CopilotKit
+import { CopilotKit } from '@copilotkit/react-core';
+
+// Chat関連
+import { ChatPanel } from './components/Common/ChatPanel';
 
 // カスタムフック
 import { useFileOperations } from './hooks/useFileOperations';
@@ -28,6 +35,9 @@ import { SupplementSection } from './components/Content/SupplementSection';
 
 // メインコンポーネント
 const App: React.FC = () => {
+  // チャットパネル状態
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  
   // タブナビゲーションフック
   const { activeTab, setActiveTab } = useTabNavigation();
   
@@ -70,7 +80,10 @@ const App: React.FC = () => {
 
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
+    <CopilotKit
+      runtimeUrl="/api/copilotkit" // ダミーエンドポイント
+    >
+      <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
       {/* ヘッダー */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex justify-between items-center">
@@ -132,11 +145,62 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* フッター */}
-      <div className="mt-6 text-center text-sm text-gray-500">
-        生成AI活用設計工程 - 統合設計書システム v2.0 (Vite + TypeScript)
+        {/* フッター */}
+        <div className="mt-6 text-center text-sm text-gray-500">
+          生成AI活用設計工程 - 統合設計書システム v2.0 (Vite + TypeScript)
+        </div>
       </div>
-    </div>
+
+      {/* フローティングチャットボタン */}
+      {!isChatOpen && (
+        <button
+          onClick={() => {
+            console.log('チャットボタンクリック！');
+            setIsChatOpen(true);
+          }}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            padding: '12px',
+            borderRadius: '50%',
+            border: 'none',
+            boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
+            cursor: 'pointer',
+            zIndex: 40,
+            width: '56px',
+            height: '56px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.1)';
+            e.target.style.backgroundColor = '#2563eb';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.backgroundColor = '#3b82f6';
+          }}
+          title="設計アシスタント"
+        >
+          <MessageCircle className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* チャットパネル */}
+      <ChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        conditionsMarkdown={conditionsMarkdown}
+        supplementMarkdown={supplementMarkdown}
+        spreadsheetData={spreadsheetData}
+        mockupImage={mockupImage}
+      />
+    </CopilotKit>
   );
 };
 
