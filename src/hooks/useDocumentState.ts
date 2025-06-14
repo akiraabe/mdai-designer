@@ -14,6 +14,8 @@ export const useDocumentState = () => {
   // 画像状態
   const [mockupImage, setMockupImage] = useState<string | null>(null);
 
+  // 元のセッター関数をそのまま使用（無限ループ防止）
+
   return {
     // 状態
     conditionsMarkdown,

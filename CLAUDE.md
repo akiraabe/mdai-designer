@@ -115,62 +115,81 @@ interface DocumentData {
 2. **バグ修正**: 該当するフック・コンポーネントを特定→局所的修正
 3. **ライブラリ変更**: Common系コンポーネントの実装のみ変更
 
-## 重要：Fortune-Sheetコンポーネントのチカチカ問題対策
+## 重要：Fortune-Sheetコンポーネントのデータ更新問題対策
 
 ### 問題概要
-Fortune-Sheetコンポーネント（SpreadsheetEditor）でデータを更新する際、keyプロパティが変更されるとコンポーネントが再マウントされ、画面がチカチカする問題が発生する。
+Fortune-Sheetコンポーネント（SpreadsheetEditor）でデータを更新する際、以下の問題が発生する：
+1. **チカチカ問題**: keyプロパティが変更されるとコンポーネントが再マウントされ、画面がチカチカする
+2. **シート名問題**: シート名が同じ場合、データ内容が変わってもスプレッドシートの表示が更新されない
 
 ### 対策（必須）
-1. **keyプロパティは絶対に固定化**
-   ```typescript
-   // ❌ 絶対にやってはいけない
-   const componentKey = useMemo(() => {
-     return `workbook-${Date.now()}`;
-   }, [data]);
-   
-   // ✅ 正しい方法
-   const componentKey = 'workbook-fixed-key';
-   ```
 
-2. **データ更新はWorkbook APIを使用**
-   ```typescript
-   // useEffectでWorkbook APIを使って直接データ更新
-   useEffect(() => {
-     if (workbookRef.current && validData && validData.length > 0) {
-       workbookRef.current.setData(validData);
-     }
-   }, [validData]);
-   ```
-
-3. **状態更新は直接実行**
-   ```typescript
-   // ❌ setTimeout等の遅延処理は不要
-   setTimeout(() => setSpreadsheetData(newData), 50);
-   
-   // ✅ 直接更新
-   setSpreadsheetData(newData);
-   ```
-
-### 再発防止策
-- **必ず**この対策を適用すること
-- 新しい開発者がこの問題に遭遇した場合、このドキュメントを参照させること
-- コードレビュー時にkeyプロパティの変更がないことを確認すること
-
-### 実証済み解決策（推奨）
-チカチカを最小限に抑えつつ、確実にデータを更新する方法：
-
+#### 1. チカチカ問題の対策
+**keyプロパティは絶対に固定化**
 ```typescript
-// シート名変更時のみキーを更新（最適解）
+// ❌ 絶対にやってはいけない
+const componentKey = useMemo(() => {
+  return `workbook-${Date.now()}`;
+}, [data]);
+
+// ✅ 正しい方法
+const componentKey = 'workbook-fixed-key';
+```
+
+**データ更新はWorkbook APIを使用**
+```typescript
+// useEffectでWorkbook APIを使って直接データ更新
+useEffect(() => {
+  if (workbookRef.current && validData && validData.length > 0) {
+    workbookRef.current.setData(validData);
+  }
+}, [validData]);
+```
+
+#### 2. シート名問題の対策（重要！）
+**データ内容も含めたキー生成で確実な更新を保証**
+```typescript
+// ❌ シート名のみ（データ変更時に更新されない）
 const componentKey = useMemo(() => {
   const sheetName = validData?.[0]?.name || 'default';
   return `workbook-${sheetName}`;
 }, [validData?.[0]?.name]);
+
+// ✅ データ内容も含める（推奨解決策）
+const componentKey = useMemo(() => {
+  const sheetName = validData?.[0]?.name || 'default';
+  const cellCount = validData?.[0]?.celldata?.length || 0;
+  const dataHash = JSON.stringify(validData?.[0]?.celldata?.slice(0, 5)) || '';
+  return `workbook-${sheetName}-${cellCount}-${dataHash.length}`;
+}, [validData?.[0]?.name, validData?.[0]?.celldata]);
+```
+
+### 問題の根本原因
+**Reactのキー機能による制約**: Reactは同じキーのコンポーネントを再レンダリングしない。そのため：
+- シート名が同じ → 同じキー → コンポーネント更新されない → データ変更が反映されない
+- シート名が異なる → 異なるキー → コンポーネント再マウント → データ変更が反映される
+
+### 実証済み解決策（最新版・推奨）
+```typescript
+// データ内容も含めたキー生成でデータ変更時の確実な更新を保証
+const componentKey = useMemo(() => {
+  const sheetName = validData?.[0]?.name || 'default';
+  const cellCount = validData?.[0]?.celldata?.length || 0;
+  const dataHash = JSON.stringify(validData?.[0]?.celldata?.slice(0, 5)) || '';
+  return `workbook-${sheetName}-${cellCount}-${dataHash.length}`;
+}, [validData?.[0]?.name, validData?.[0]?.celldata]);
 ```
 
 **利点:**
-- シート名が変わる時だけ再マウント（チカチカ最小限）
-- データ更新は確実に反映される
-- セル内容の変更では再マウントしない
+- シート名が同じでもデータ内容が変われば確実に更新される
+- チカチカは最小限（データ変更時のみ再マウント）
+- セル数やデータ内容の変化を検知して適切に更新
+
+### 再発防止策
+- **必ず**この対策を適用すること
+- 新しい開発者がこの問題に遭遇した場合、このドキュメントを参照させること
+- コードレビュー時にkeyプロパティの実装を確認すること
+- シート名問題の存在を開発チーム全体で共有すること
 
 ## 未解決の既知問題
 
