@@ -100,36 +100,36 @@ const App: React.FC = () => {
       {/* メインコンテンツ */}
       <div className="bg-white rounded-b-lg shadow-sm p-6">
         {/* 表示条件 */}
-        {(activeTab === 'all' || activeTab === 'conditions') && (
+        <div style={{ display: (activeTab === 'all' || activeTab === 'conditions') ? 'block' : 'none' }}>
           <ConditionsSection
             conditionsMarkdown={conditionsMarkdown}
             onConditionsChange={setConditionsMarkdown}
           />
-        )}
+        </div>
 
         {/* 画面イメージ */}
-        {(activeTab === 'all' || activeTab === 'mockup') && (
+        <div style={{ display: (activeTab === 'all' || activeTab === 'mockup') ? 'block' : 'none' }}>
           <MockupSection
             mockupImage={mockupImage}
             onImageUpload={handleImageUpload}
           />
-        )}
+        </div>
 
         {/* 項目定義 */}
-        {(activeTab === 'all' || activeTab === 'definitions') && (
+        <div style={{ display: (activeTab === 'all' || activeTab === 'definitions') ? 'block' : 'none' }}>
           <DefinitionsSection
             spreadsheetData={spreadsheetData}
             onSpreadsheetChange={setSpreadsheetData}
           />
-        )}
+        </div>
 
         {/* 補足説明 */}
-        {activeTab === 'all' && (
+        <div style={{ display: activeTab === 'all' ? 'block' : 'none' }}>
           <SupplementSection
             supplementMarkdown={supplementMarkdown}
             onSupplementChange={setSupplementMarkdown}
           />
-        )}
+        </div>
       </div>
 
       {/* フッター */}
