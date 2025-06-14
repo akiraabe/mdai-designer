@@ -29,16 +29,33 @@ export const initialSupplementMarkdown = `## 補足説明
 - 大量データの場合はページネーション実装
 - キャッシュ機能により応答速度向上`;
 
-// 初期スプレッドシートデータ
+// 初期スプレッドシートデータ（書式情報対応）
 export const initialSpreadsheetData = [
   {
     name: "項目定義",
+    id: "sheet1",
+    status: 1,
+    order: 0,
+    hide: 0,
+    row: 100,
+    column: 26,
+    defaultRowHeight: 19,
+    defaultColWidth: 73,
     celldata: [
-      { r: 0, c: 0, v: { v: 'A1', ct: { fa: 'General', t: 'g' } } },
-      { r: 0, c: 1, v: { v: 'B1', ct: { fa: 'General', t: 'g' } } },
-      { r: 1, c: 0, v: { v: 'A2', ct: { fa: 'General', t: 'g' } } },
-      { r: 1, c: 1, v: { v: 'B2', ct: { fa: 'General', t: 'g' } } }
-    ]
+      { r: 0, c: 0, v: { v: 'A1', m: 'A1', ct: { fa: 'General', t: 'g' } } },
+      { r: 0, c: 1, v: { v: 'B1', m: 'B1', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 0, v: { v: 'A2', m: 'A2', ct: { fa: 'General', t: 'g' } } },
+      { r: 1, c: 1, v: { v: 'B2', m: 'B2', ct: { fa: 'General', t: 'g' } } }
+    ],
+    config: {
+      merge: {},
+      rowlen: {},
+      columnlen: {},
+      rowhidden: {},
+      colhidden: {},
+      borderInfo: [],
+      authority: {}
+    }
   }
 ];
 
