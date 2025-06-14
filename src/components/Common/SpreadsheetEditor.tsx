@@ -59,7 +59,8 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   
   // データが無効な場合のフォールバック（簡略化して無限ループ防止）
   const validData = useMemo(() => {
-    if (!data || !Array.isArray(data) || data.length === 0) {
+    if (!data || !Array.isArray(data) || data.length === 0 || !data[0]?.celldata || data[0].celldata.length === 0) {
+      console.log('📊 サンプルデータを生成');
       return [{
         name: "Sheet1",
         celldata: [
@@ -77,18 +78,14 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       }];
     }
     
+    console.log('📊 既存データを使用');
     // データをそのまま返す（複雑な正規化は後で実装）
     return data;
   }, [data]);
   
-  // 表示モード時のデータ読み込み処理
+  // データ読み込み処理（両モード対応）
   useEffect(() => {
-    if (isEditMode) {
-      console.log('✏️ 編集モード：データ読み込みスキップ');
-      return;
-    }
-    
-    console.log('📊 表示モード：データ読み込み実行');
+    console.log('📊 データ読み込み実行（モード:', isEditMode ? '編集' : '表示', ')');
     
     // セル結合情報の詳細ログ
     if (data?.[0]?.config?.merge && Object.keys(data[0].config.merge).length > 0) {
@@ -97,7 +94,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       console.log('❌ セル結合情報なし');
     }
     
-    // 表示モード時のみWorkbook APIでデータ更新
+    // Workbook APIでデータ更新（両モードで実行）
     if (workbookRef.current && validData && validData.length > 0) {
       console.log('📊 Workbook APIでデータ直接更新実行');
       try {
@@ -107,7 +104,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         console.warn('⚠️ Workbook API更新失敗:', error);
       }
     }
-  }, [data, validData, isEditMode]);
+  }, [data, validData]);
   
   // 日本語IME入力対応のイベントハンドラー
   useEffect(() => {
@@ -304,7 +301,11 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         </div>
         
         {/* 表示モード時の編集無効化オーバーレイ */}
-        <div style={{ position: 'relative' }}>
+        <div style={{ 
+          position: 'relative', 
+          height: 'calc(100% - 80px)', 
+          width: '100%' 
+        }}>
           <Workbook
             ref={workbookRef}
             key={componentKey}
