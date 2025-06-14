@@ -16,16 +16,9 @@ export const DefinitionsSection: React.FC<DefinitionsSectionProps> = ({
   return (
     <MarkdownSection title="項目定義" icon={Table}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-gray-600">
-            Excelからコピペ可能です。セルをクリックして直接編集できます。
-          </p>
-          <div className="flex space-x-2">
-            <button className="text-sm text-blue-600 hover:text-blue-800">
-              Excel貼り付けヘルプ
-            </button>
-          </div>
-        </div>
+        <p className="text-gray-600">
+          Excelからコピペ可能です。セルをクリックして直接編集できます。
+        </p>
         
         <SpreadsheetEditor 
           data={spreadsheetData}
