@@ -103,35 +103,49 @@ export const useFileOperations = ({
                 celldataLength: sheet?.celldata?.length
               });
               
-              // dataプロパティがある場合はcelldataに変換
+              // dataプロパティがある場合はcelldataに変換（安全性強化）
               let celldata = sheet?.celldata || [];
               if (sheet?.data && Array.isArray(sheet.data)) {
                 celldata = [];
                 sheet.data.forEach((row: any[], rowIndex: number) => {
                   if (Array.isArray(row)) {
                     row.forEach((cell: any, colIndex: number) => {
-                      if (cell !== null && cell !== undefined) {
+                      // null、undefined、空文字をスキップ
+                      if (cell === null || cell === undefined || cell === '') {
+                        return;
+                      }
+                      
+                      try {
                         if (typeof cell === 'object' && cell.v !== undefined) {
-                          celldata.push({
-                            r: rowIndex,
-                            c: colIndex,
-                            v: {
-                              v: cell.v,
-                              m: cell.m || cell.v,
-                              ct: cell.ct || { fa: 'General', t: 'g' }
-                            }
-                          });
-                        } else if (cell !== '') {
-                          celldata.push({
-                            r: rowIndex,
-                            c: colIndex,
-                            v: {
-                              v: cell,
-                              m: cell,
-                              ct: { fa: 'General', t: 'g' }
-                            }
-                          });
+                          // 既にFortune-Sheet形式のセル
+                          if (cell.v !== null && cell.v !== undefined && cell.v !== '') {
+                            celldata.push({
+                              r: rowIndex,
+                              c: colIndex,
+                              v: {
+                                v: cell.v,
+                                m: String(cell.m || cell.v), // 必ず文字列化
+                                ct: cell.ct || { fa: 'General', t: 'g' }
+                              }
+                            });
+                          }
+                        } else {
+                          // プリミティブ値
+                          const stringValue = String(cell);
+                          if (stringValue.trim() !== '') {
+                            celldata.push({
+                              r: rowIndex,
+                              c: colIndex,
+                              v: {
+                                v: cell,
+                                m: stringValue,
+                                ct: { fa: 'General', t: 'g' }
+                              }
+                            });
+                          }
                         }
+                      } catch (err) {
+                        console.warn(`⚠️ セル(${rowIndex},${colIndex})の変換でエラー:`, err, cell);
                       }
                     });
                   }
@@ -139,6 +153,26 @@ export const useFileOperations = ({
                 console.log(`📂 シート${index} data→celldata変換完了:`, celldata.length);
                 console.log(`📂 変換されたcelldata:`, celldata.slice(0, 3));
               }
+              
+              // celldataの追加検証・修正
+              celldata = celldata.filter((cell: any) => {
+                if (!cell || typeof cell.r !== 'number' || typeof cell.c !== 'number') {
+                  console.warn('⚠️ 読み込み時: 無効なセル座標、除外:', cell);
+                  return false;
+                }
+                if (!cell.v || cell.v.v === undefined || cell.v.v === null || cell.v.v === '') {
+                  return false;
+                }
+                return true;
+              }).map((cell: any) => ({
+                r: cell.r,
+                c: cell.c,
+                v: {
+                  v: cell.v.v,
+                  m: String(cell.v.m || cell.v.v),
+                  ct: cell.v.ct || { fa: 'General', t: 'g' }
+                }
+              }));
               
               const normalizedSheet = {
                 name: sheet.name || `Sheet${index + 1}`,
