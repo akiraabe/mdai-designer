@@ -195,6 +195,10 @@ const App: React.FC = () => {
       <ChatPanel
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
+        conditionsMarkdown={conditionsMarkdown}
+        supplementMarkdown={supplementMarkdown}
+        spreadsheetData={spreadsheetData}
+        mockupImage={mockupImage}
       />
     </CopilotKit>
   );
