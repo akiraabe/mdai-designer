@@ -1,5 +1,5 @@
 // src/components/Common/SpreadsheetEditor.tsx
-import React, { useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import { Workbook } from '@fortune-sheet/react';
 import '@fortune-sheet/react/dist/index.css';
 import { SpreadsheetErrorBoundary } from './SpreadsheetErrorBoundary';
@@ -54,12 +54,22 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   const workbookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // モード管理：false=表示モード（読み込み対応）、true=編集モード（フォーカス維持）
+  const [isEditMode, setIsEditMode] = useState(false);
+  
   // データが無効な場合のフォールバック（簡略化して無限ループ防止）
   const validData = useMemo(() => {
     if (!data || !Array.isArray(data) || data.length === 0) {
       return [{
         name: "Sheet1",
-        celldata: [],
+        celldata: [
+          {r: 0, c: 0, v: {v: "項目名", m: "項目名", ct: {fa: "General", t: "g"}}},
+          {r: 0, c: 1, v: {v: "データ型", m: "データ型", ct: {fa: "General", t: "g"}}},
+          {r: 0, c: 2, v: {v: "説明", m: "説明", ct: {fa: "General", t: "g"}}},
+          {r: 1, c: 0, v: {v: "ユーザーID", m: "ユーザーID", ct: {fa: "General", t: "g"}}},
+          {r: 1, c: 1, v: {v: "文字列", m: "文字列", ct: {fa: "General", t: "g"}}},
+          {r: 1, c: 2, v: {v: "ユーザーを一意に識別するID", m: "ユーザーを一意に識別するID", ct: {fa: "General", t: "g"}}}
+        ],
         row: 100,
         column: 26,
         order: 0,
@@ -71,15 +81,14 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     return data;
   }, [data]);
   
-  // データ受信時のログ（読み込み調査用）
+  // 表示モード時のデータ読み込み処理
   useEffect(() => {
-    console.log('📊 SpreadsheetEditor データ受信:', {
-      name: data?.[0]?.name,
-      cellCount: data?.[0]?.celldata?.length,
-      hasCelldata: !!data?.[0]?.celldata,
-      hasData: !!data?.[0]?.data,
-      mergeInfo: data?.[0]?.config?.merge
-    });
+    if (isEditMode) {
+      console.log('✏️ 編集モード：データ読み込みスキップ');
+      return;
+    }
+    
+    console.log('📊 表示モード：データ読み込み実行');
     
     // セル結合情報の詳細ログ
     if (data?.[0]?.config?.merge && Object.keys(data[0].config.merge).length > 0) {
@@ -88,7 +97,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       console.log('❌ セル結合情報なし');
     }
     
-    // Workbook APIを使ってデータを直接更新（再マウント不要）
+    // 表示モード時のみWorkbook APIでデータ更新
     if (workbookRef.current && validData && validData.length > 0) {
       console.log('📊 Workbook APIでデータ直接更新実行');
       try {
@@ -98,7 +107,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         console.warn('⚠️ Workbook API更新失敗:', error);
       }
     }
-  }, [data, validData]);
+  }, [data, validData, isEditMode]);
   
   // 日本語IME入力対応のイベントハンドラー
   useEffect(() => {
@@ -138,14 +147,14 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     };
   }, []);
   
-  // onChangeハンドラー（書式情報完全保存対応）
+  // onChangeハンドラー（編集モード時のみ動作）
   const handleChange = useCallback((sheets: any) => {
-    console.log('🔍 データ詳細:', {
-      celldata: !!sheets?.[0]?.celldata,
-      data: !!sheets?.[0]?.data,
-      dataLength: sheets?.[0]?.data?.length,
-      dataType: typeof sheets?.[0]?.data
-    });
+    if (!isEditMode) {
+      console.log('📊 表示モード：onChange無視');
+      return;
+    }
+    
+    console.log('✏️ 編集モード：onChange処理実行');
     
     if (sheets && sheets.length > 0) {
       // 完全なシートデータを保存（data→celldata変換対応）
@@ -210,16 +219,25 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       // console.log('✅ onDataChangeを呼び出し! セル数:', completeSheets[0]?.celldata?.length);
       onDataChange(completeSheets);
     }
-  }, [onDataChange]);
+  }, [isEditMode, onDataChange]);
   
   
-  // データ内容も含めたキー生成でデータ変更時の確実な更新を保証
+  // モード別キー生成：編集モードは固定、表示モードは動的
   const componentKey = useMemo(() => {
-    const sheetName = validData?.[0]?.name || 'default';
-    const cellCount = validData?.[0]?.celldata?.length || 0;
-    const dataHash = JSON.stringify(validData?.[0]?.celldata?.slice(0, 5)) || '';
-    return `workbook-${sheetName}-${cellCount}-${dataHash.length}`;
-  }, [validData?.[0]?.name, validData?.[0]?.celldata]);
+    if (isEditMode) {
+      // 編集モード：固定キーでフォーカス維持
+      console.log('✏️ 編集モード：固定キー使用');
+      return 'workbook-edit-mode';
+    } else {
+      // 表示モード：動的キーで読み込み対応
+      const sheetName = validData?.[0]?.name || 'default';
+      const cellCount = validData?.[0]?.celldata?.length || 0;
+      const dataHash = JSON.stringify(validData?.[0]?.celldata?.slice(0, 5)) || '';
+      const key = `workbook-view-${sheetName}-${cellCount}-${dataHash.length}`;
+      console.log('📊 表示モード：動的キー生成', key);
+      return key;
+    }
+  }, [isEditMode, validData?.[0]?.name, validData?.[0]?.celldata]);
   
   return (
     <SpreadsheetErrorBoundary onReset={() => {
@@ -232,41 +250,88 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         order: 0
       }]);
     }}>
-      <div ref={containerRef} style={{ height: '500px', width: '100%' }}>
-        <div style={{ fontSize: '12px', color: 'blue', marginBottom: '4px' }}>
-          現在: {validData?.[0]?.name} (セル数: {validData?.[0]?.celldata?.length})
-          <span style={{ marginLeft: '10px', color: '#10b981', fontSize: '11px' }}>
-            ✅ 編集内容は自動保存されます
+      <div ref={containerRef} style={{ height: '80vh', width: '100%', minHeight: '600px' }}>
+        {/* モード切り替えコントロール */}
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', gap: '12px' }}>
+          <div style={{ fontSize: '12px', color: 'blue' }}>
+            現在: {validData?.[0]?.name} (セル数: {validData?.[0]?.celldata?.length})
+          </div>
+          
+          {/* スイッチコンポーネント */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#6b7280' }}>表示</span>
+            <div
+              onClick={() => setIsEditMode(!isEditMode)}
+              style={{
+                width: '44px',
+                height: '24px',
+                backgroundColor: isEditMode ? '#10b981' : '#d1d5db',
+                borderRadius: '12px',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+            >
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  position: 'absolute',
+                  top: '2px',
+                  left: isEditMode ? '22px' : '2px',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
+                }}
+              />
+            </div>
+            <span style={{ fontSize: '11px', color: '#6b7280' }}>編集</span>
+          </div>
+          
+          <span style={{ 
+            fontSize: '11px', 
+            color: isEditMode ? '#10b981' : '#6b7280',
+            fontWeight: 'bold'
+          }}>
+            {isEditMode 
+              ? '✏️ 編集モード：手作業編集可能・フォーカス維持' 
+              : '👁️ 表示モード：読み込み対応・編集無効'}
           </span>
         </div>
         <div style={{ fontSize: '10px', color: 'red', marginBottom: '4px' }}>
-          デバッグ: {JSON.stringify(validData?.[0]?.celldata?.slice(0, 2))}
+          デバッグ: セル数={validData?.[0]?.celldata?.length || 0}, データ={JSON.stringify(validData?.[0]?.celldata?.slice(0, 2))}
         </div>
-        <Workbook
-          ref={workbookRef}
-          key={componentKey}
-          data={validData}
-          onChange={handleChange}
-          lang="en"
-          options={{
-            // 日本語IME入力対応
-            container: 'luckysheet',
-            allowEdit: true,
-            showinfobar: false,
-            showsheetbar: true,
-            showstatisticBar: false,
-            // IME入力時のエンターキー処理を無効化
-            enableAddRow: false,
-            // セル編集時の詳細設定
-            functionButton: '<i class="fa fa-calculator" aria-hidden="true"></i>',
-            // 日本語入力モード設定
-            editMode: false,
-            // エンターキーでのセル移動を制御
-            allowCopy: true,
-            allowEdit: true,
-            forceCalculation: false
-          }}
-        />
+        
+        {/* 表示モード時の編集無効化オーバーレイ */}
+        <div style={{ position: 'relative' }}>
+          <Workbook
+            ref={workbookRef}
+            key={componentKey}
+            data={validData}
+            onChange={handleChange}
+          />
+          
+          {!isEditMode && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'transparent',
+                cursor: 'not-allowed',
+                zIndex: 1000
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                alert('編集するには右上のスイッチで編集モードに切り替えてください');
+              }}
+            />
+          )}
+        </div>
       </div>
     </SpreadsheetErrorBoundary>
   );
