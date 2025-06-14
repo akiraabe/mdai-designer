@@ -17,6 +17,8 @@ interface ChatPanelProps {
   supplementMarkdown: string;
   spreadsheetData: any[];
   mockupImage: string | null;
+  // マークダウン更新機能
+  onConditionsMarkdownUpdate: (markdown: string) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -25,7 +27,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   conditionsMarkdown, 
   supplementMarkdown, 
   spreadsheetData, 
-  mockupImage 
+  mockupImage,
+  onConditionsMarkdownUpdate
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -37,6 +40,65 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // 定型質問ボタンの定義
+  const suggestedQuestions = [
+    '現在のデータは？',
+    'スプレッドシートの中身',
+    '表示条件を教えて',
+    '/status',
+    '/help',
+    '/write'
+  ];
+
+  // マークダウンにチャット履歴を書き込む機能
+  const writeToMarkdown = () => {
+    const now = new Date();
+    const timestamp = now.toLocaleString('ja-JP');
+    
+    // 既存のマークダウンにCopilotKitセクションを追加/更新
+    let updatedMarkdown = conditionsMarkdown;
+    
+    // CopilotKitセクションが既に存在するかチェック
+    const copilotSection = '\n\n### CopilotKitからの書き込み\n';
+    const sectionExists = updatedMarkdown.includes('### CopilotKitからの書き込み');
+    
+    if (!sectionExists) {
+      updatedMarkdown += copilotSection;
+    }
+    
+    // 最新のチャット履歴を箇条書きで追加
+    const recentMessages = messages.slice(-6); // 最新6件のメッセージ
+    let chatHistory = `\n**${timestamp} のチャット履歴:**\n`;
+    
+    recentMessages.forEach((msg) => {
+      const speaker = msg.isUser ? '👤 ユーザー' : '🤖 アシスタント';
+      const content = msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : '');
+      chatHistory += `- **${speaker}**: ${content}\n`;
+    });
+    
+    chatHistory += '\n---\n';
+    
+    // セクションの最後に新しい履歴を追加
+    if (sectionExists) {
+      const parts = updatedMarkdown.split('### CopilotKitからの書き込み');
+      updatedMarkdown = parts[0] + '### CopilotKitからの書き込み' + parts[1] + chatHistory;
+    } else {
+      updatedMarkdown += chatHistory;
+    }
+    
+    // マークダウンを更新
+    onConditionsMarkdownUpdate(updatedMarkdown);
+    
+    return `✅ **チャット履歴を表示条件に書き込みました！**
+
+📝 **書き込み内容:**
+- 最新${recentMessages.length}件のメッセージ
+- タイムスタンプ: ${timestamp}
+- 書き込み先: 表示条件セクション
+
+「表示条件」タブを確認してください。`;
+  };
 
   // メッセージが追加されたら自動で下にスクロール
   useEffect(() => {
@@ -84,6 +146,75 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const getDummyResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
     const currentData = analyzeCurrentData();
+    
+    // /helpコマンドの処理
+    if (userMessage.startsWith('/help')) {
+      return `🤖 **設計アシスタント ヘルプ**
+
+**利用可能なコマンド:**
+• \`/help\` - このヘルプを表示
+• \`/status\` - 現在のデータ状況を表示
+• \`/data\` - スプレッドシートの詳細データを表示
+• \`/write\` - チャット履歴を表示条件に書き込み
+
+**よくある質問:**
+• "現在のデータは？" - 全体の状況確認
+• "スプレッドシートの中身" - 項目定義の詳細
+• "表示条件は？" - 表示条件の内容確認
+• "もっと詳しく" - より詳細な情報表示
+
+**使い方のコツ:**
+チャット下部の質問ボタンをクリックするか、上記のコマンドを直接入力してください。`;
+    }
+
+    // /statusコマンドの処理
+    if (userMessage.startsWith('/status')) {
+      return `📊 **現在の設計書ステータス**
+
+**データ入力状況:**
+✅ 項目定義: ${currentData.spreadsheet.hasData ? `${currentData.spreadsheet.cellCount}セル入力済み` : '未入力'}
+✅ 表示条件: ${currentData.conditions.hasContent ? `${currentData.conditions.length}文字入力済み` : '未入力'}
+✅ 補足説明: ${currentData.supplement.hasContent ? `${currentData.supplement.length}文字入力済み` : '未入力'}
+✅ 画面イメージ: ${currentData.mockup.hasImage ? 'アップロード済み' : '未アップロード'}
+
+**完成度:** ${Math.round((
+  (currentData.spreadsheet.hasData ? 1 : 0) +
+  (currentData.conditions.hasContent ? 1 : 0) +
+  (currentData.supplement.hasContent ? 1 : 0) +
+  (currentData.mockup.hasImage ? 1 : 0)
+) / 4 * 100)}%`;
+    }
+
+    // /dataコマンドの処理
+    if (userMessage.startsWith('/data')) {
+      if (currentData.spreadsheet.hasData) {
+        const allCells = spreadsheetData?.[0]?.celldata || [];
+        const sortedCells = allCells.sort((a: any, b: any) => {
+          if (a.r !== b.r) return a.r - b.r;
+          return a.c - b.c;
+        });
+
+        let detailedData = '📋 **スプレッドシート全データ:**\n\n';
+        sortedCells.slice(0, 20).forEach((cell: any) => {
+          const cellValue = cell.v?.v || cell.v || '';
+          const cellRef = String.fromCharCode(65 + cell.c) + (cell.r + 1);
+          detailedData += `${cellRef}: "${cellValue}"\n`;
+        });
+
+        if (allCells.length > 20) {
+          detailedData += `\n...他${allCells.length - 20}個のセル`;
+        }
+
+        return detailedData;
+      } else {
+        return '❌ スプレッドシートにデータがありません。「テストデータ」ボタンでサンプルを読み込んでください。';
+      }
+    }
+
+    // /writeコマンドの処理
+    if (userMessage.startsWith('/write')) {
+      return writeToMarkdown();
+    }
     
     // 現在のデータに関する質問への対応
     if (lowerMessage.includes('現在') || lowerMessage.includes('データ') || lowerMessage.includes('内容')) {
@@ -256,6 +387,35 @@ ${tableData}
     setInputMessage('');
   };
 
+  // 質問ボタンクリック時の処理
+  const handleQuestionClick = (question: string) => {
+    setInputMessage(question);
+    // 少し遅延してから自動送信
+    setTimeout(() => {
+      if (question.trim()) {
+        const userMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: question,
+          isUser: true,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, userMessage]);
+
+        setTimeout(() => {
+          const botResponse: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: getDummyResponse(question),
+            isUser: false,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, botResponse]);
+        }, 500);
+
+        setInputMessage('');
+      }
+    }, 100);
+  };
+
   return (
     <div 
       style={{
@@ -344,6 +504,57 @@ ${tableData}
         ))}
         {/* スクロール用の要素 */}
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* 定型質問ボタンエリア */}
+      <div style={{
+        padding: '12px 16px',
+        borderTop: '1px solid #f3f4f6',
+        backgroundColor: '#fafafa'
+      }}>
+        <div style={{ 
+          fontSize: '12px', 
+          color: '#6b7280', 
+          marginBottom: '8px',
+          fontWeight: '500'
+        }}>
+          💡 よく使われる質問
+        </div>
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '6px'
+        }}>
+          {suggestedQuestions.map((question, index) => (
+            <button
+              key={index}
+              onClick={() => handleQuestionClick(question)}
+              style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '16px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                color: '#374151',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f3f4f6';
+                e.currentTarget.style.borderColor = '#3b82f6';
+                e.currentTarget.style.color = '#3b82f6';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#ffffff';
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.color = '#374151';
+              }}
+            >
+              {question}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 入力エリア */}
