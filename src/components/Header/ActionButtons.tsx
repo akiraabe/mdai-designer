@@ -20,18 +20,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       <button
         data-testid="import-button"
         onClick={onImport}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '8px 16px',
-          backgroundColor: '#ea580c',
-          color: 'white',
-          border: '2px solid #c2410c',
-          borderRadius: '6px',
-          fontSize: '14px',
-          fontWeight: '500',
-          cursor: 'pointer'
-        }}
+        className="flex items-center px-4 py-2 bg-orange-500 text-white border-2 border-orange-600 rounded-md text-sm font-bold cursor-pointer hover:bg-orange-600 transition-colors shadow-md"
       >
         <Upload className="w-4 h-4 mr-2" />
         インポート
@@ -46,18 +35,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       <button
         data-testid="export-button"
         onClick={onExport}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '8px 16px',
-          backgroundColor: '#2563eb',
-          color: 'white',
-          border: 'none',
-          borderRadius: '6px',
-          fontSize: '14px',
-          fontWeight: '500',
-          cursor: 'pointer'
-        }}
+        className="flex items-center px-4 py-2 bg-blue-500 text-white border border-blue-600 rounded-md text-sm font-bold cursor-pointer hover:bg-blue-600 transition-colors shadow-md"
       >
         <Download className="w-4 h-4 mr-2" />
         エクスポート
@@ -65,18 +43,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       <button
         data-testid="test-data-button"
         onClick={onLoadTestData}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '8px 16px',
-          backgroundColor: '#9333ea',
-          color: 'white',
-          border: 'none',
-          borderRadius: '6px',
-          fontSize: '14px',
-          fontWeight: '500',
-          cursor: 'pointer'
-        }}
+        className="flex items-center px-4 py-2 bg-purple-500 text-white border border-purple-600 rounded-md text-sm font-bold cursor-pointer hover:bg-purple-600 transition-colors shadow-md"
       >
         テストデータ
       </button>

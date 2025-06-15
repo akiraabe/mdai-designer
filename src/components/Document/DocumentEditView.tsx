@@ -120,7 +120,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
             <div className="flex items-center">
               <button
                 onClick={onGoBack}
-                className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg mr-4"
+                className="flex items-center px-3 py-2 bg-gray-600 border border-gray-700 text-white hover:bg-gray-700 rounded-lg mr-4 font-bold"
               >
                 <ArrowLeft className="w-5 h-5 mr-1" />
                 戻る

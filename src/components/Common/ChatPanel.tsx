@@ -294,7 +294,7 @@ ${tableData}
           return a.c - b.c;
         });
 
-        sortedCells.slice(0, 50).forEach((cell: any, index: number) => {
+        sortedCells.slice(0, 50).forEach((cell: any) => {
           const cellValue = cell.v?.v || cell.v || '';
           const cellRef = String.fromCharCode(65 + cell.c) + (cell.r + 1); // A1形式
           detailedData += `${cellRef}: "${cellValue}"\n`;

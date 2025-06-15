@@ -79,7 +79,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center px-4 py-2 bg-blue-600 text-white border-2 border-blue-800 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-lg"
+          style={{ backgroundColor: '#1d4ed8', color: '#ffffff' }}
         >
           <Plus className="w-5 h-5 mr-2" />
           新規プロジェクト
@@ -119,7 +120,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
             <div className="flex space-x-3">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-500 text-white border border-blue-600 rounded-md hover:bg-blue-600 font-bold shadow-md"
               >
                 作成
               </button>
@@ -129,7 +130,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                   setShowCreateForm(false);
                   setFormData({ name: '', description: '' });
                 }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-600 text-white border border-gray-700 rounded-md hover:bg-gray-700 font-bold shadow-md"
+                style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
               >
                 キャンセル
               </button>
@@ -146,7 +148,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           <p className="text-gray-500 mb-4">最初のプロジェクトを作成して設計書の管理を始めましょう</p>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 bg-blue-500 text-white border border-blue-600 rounded-lg hover:bg-blue-600 font-bold shadow-md"
           >
             <Plus className="w-5 h-5 mr-2" />
             新規プロジェクト作成
@@ -179,14 +181,15 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                   <div className="flex space-x-2">
                     <button
                       type="submit"
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      className="px-3 py-1 bg-blue-500 text-white border border-blue-600 text-sm rounded hover:bg-blue-600 font-bold"
                     >
                       保存
                     </button>
                     <button
                       type="button"
                       onClick={cancelEdit}
-                      className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                      className="px-3 py-1 bg-gray-600 text-white border border-gray-700 text-sm rounded hover:bg-gray-700 font-bold"
+                      style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
                     >
                       キャンセル
                     </button>
@@ -244,7 +247,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         e.stopPropagation();
                         startEdit(project);
                       }}
-                      className="flex items-center px-3 py-1 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded"
+                      className="flex items-center px-3 py-1 text-sm text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 rounded font-bold"
                     >
                       <Edit2 className="w-4 h-4 mr-1" />
                       編集
@@ -254,7 +257,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         e.stopPropagation();
                         handleDelete(project);
                       }}
-                      className="flex items-center px-3 py-1 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded"
+                      className="flex items-center px-3 py-1 text-sm text-white bg-red-500 border border-red-600 hover:bg-red-600 rounded font-bold"
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       削除

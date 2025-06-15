@@ -73,7 +73,8 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
       <div className="flex items-center mb-6">
         <button
           onClick={onGoBack}
-          className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg mr-4"
+          className="flex items-center px-3 py-2 bg-gray-600 text-white border border-gray-700 hover:bg-gray-700 rounded-lg mr-4 font-bold shadow-md"
+          style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
         >
           <ArrowLeft className="w-5 h-5 mr-1" />
           戻る
@@ -96,7 +97,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center px-4 py-2 bg-green-500 text-white border border-green-600 rounded-lg hover:bg-green-600 transition-colors font-bold shadow-md"
         >
           <Plus className="w-5 h-5 mr-2" />
           新規設計書
@@ -124,7 +125,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
             <div className="flex space-x-3">
               <button
                 type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="px-4 py-2 bg-green-500 text-white border border-green-600 rounded-md hover:bg-green-600 font-bold shadow-md"
               >
                 作成
               </button>
@@ -134,7 +135,8 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                   setShowCreateForm(false);
                   setFormData({ name: '' });
                 }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-600 text-white border border-gray-700 rounded-md hover:bg-gray-700 font-bold shadow-md"
+                style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
               >
                 キャンセル
               </button>
@@ -151,7 +153,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
           <p className="text-gray-500 mb-4">最初の設計書を作成して編集を始めましょう</p>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="inline-flex items-center px-4 py-2 bg-green-500 text-white border border-green-600 rounded-lg hover:bg-green-600 font-bold shadow-md"
           >
             <Plus className="w-5 h-5 mr-2" />
             新規設計書作成
@@ -176,14 +178,15 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                   <div className="flex space-x-2">
                     <button
                       type="submit"
-                      className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                      className="px-3 py-1 bg-green-500 text-white border border-green-600 text-sm rounded hover:bg-green-600 font-bold"
                     >
                       保存
                     </button>
                     <button
                       type="button"
                       onClick={cancelEdit}
-                      className="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                      className="px-3 py-1 bg-gray-600 text-white border border-gray-700 text-sm rounded hover:bg-gray-700 font-bold"
+                      style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
                     >
                       キャンセル
                     </button>
@@ -255,7 +258,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                         e.stopPropagation();
                         startEdit(document);
                       }}
-                      className="flex items-center px-3 py-1 text-sm text-gray-600 hover:text-green-600 hover:bg-green-50 rounded"
+                      className="flex items-center px-3 py-1 text-sm text-white bg-green-500 border border-green-600 hover:bg-green-600 rounded font-bold"
                     >
                       <Edit2 className="w-4 h-4 mr-1" />
                       名前変更
@@ -265,7 +268,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                         e.stopPropagation();
                         handleDelete(document);
                       }}
-                      className="flex items-center px-3 py-1 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded"
+                      className="flex items-center px-3 py-1 text-sm text-white bg-red-500 border border-red-600 hover:bg-red-600 rounded font-bold"
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       削除

@@ -235,7 +235,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
           console.log('✅ 変換完了。セル数:', celldata.length);
         }
         
-        return {
+        const normalizedSheet = {
           // 基本プロパティ
           name: sheet.name,
           id: sheet.id,

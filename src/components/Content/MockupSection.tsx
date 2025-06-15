@@ -25,7 +25,8 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
           />
           <label
             htmlFor="mockup-upload"
-            className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+            className="flex items-center px-4 py-2 bg-gray-200 text-gray-800 border border-gray-400 rounded-lg cursor-pointer hover:bg-gray-300 transition-colors font-bold shadow-md"
+            style={{ backgroundColor: '#e5e7eb', color: '#1f2937' }}
           >
             <Upload className="w-4 h-4 mr-2" />
             画像をアップロード

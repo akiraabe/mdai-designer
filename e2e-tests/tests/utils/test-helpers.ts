@@ -24,6 +24,47 @@ export class TestHelpers {
   }
 
   /**
+   * プロジェクト作成
+   */
+  async createProject(name: string, description?: string): Promise<void> {
+    // 新規プロジェクトボタンをクリック
+    const createButton = this.page.locator('button:has-text("新規プロジェクト")');
+    await expect(createButton).toBeVisible();
+    await createButton.click();
+    
+    // フォームに入力
+    await this.page.fill('input[placeholder*="プロジェクト"]', name);
+    if (description) {
+      await this.page.fill('textarea[placeholder*="概要"]', description);
+    }
+    
+    // 作成ボタンをクリック
+    await this.page.click('button[type="submit"]:has-text("作成")');
+    
+    // 設計書一覧画面への遷移を待機
+    await this.page.waitForTimeout(1500);
+  }
+
+  /**
+   * 設計書作成
+   */
+  async createDocument(name: string): Promise<void> {
+    // 新規設計書ボタンをクリック
+    const createButton = this.page.locator('button:has-text("新規設計書")');
+    await expect(createButton).toBeVisible();
+    await createButton.click();
+    
+    // フォームに入力
+    await this.page.fill('input[placeholder*="設計書"]', name);
+    
+    // 作成ボタンをクリック
+    await this.page.click('button[type="submit"]:has-text("作成")');
+    
+    // 設計書編集画面への遷移を待機
+    await this.page.waitForTimeout(1500);
+  }
+
+  /**
    * テストデータボタンをクリック
    */
   async clickTestDataButton(): Promise<void> {
