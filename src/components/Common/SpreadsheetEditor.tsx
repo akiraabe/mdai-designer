@@ -60,6 +60,8 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   // リサイズ機能用の状態
   const [height, setHeight] = useState(600); // デフォルト高さ
   const [isResizing, setIsResizing] = useState(false);
+  const [resizeKey, setResizeKey] = useState(0); // 強制再マウント用
+  const [forceResizeUpdate, setForceResizeUpdate] = useState(false); // リサイズ強制フラグ
   const resizeStartY = useRef(0);
   const startHeight = useRef(600);
   
@@ -168,6 +170,16 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
+    
+    // リサイズ完了後にWorkbookを強制再マウント
+    console.log('🔄 リサイズ完了：Workbook強制再マウント実行');
+    setForceResizeUpdate(true);
+    setResizeKey(prev => prev + 1);
+    
+    // フラグをリセット
+    setTimeout(() => {
+      setForceResizeUpdate(false);
+    }, 200);
   }, []);
   
   // グローバルマウスイベントの管理
@@ -264,22 +276,34 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   }, [isEditMode, onDataChange]);
   
   
-  // モード別キー生成：編集モードは固定、表示モードは動的
+  // データ読み込み判定の改善
+  const isDataLoading = useMemo(() => {
+    const hasRealData = validData?.[0]?.celldata && validData[0].celldata.length > 6; // サンプルデータより多い
+    const hasSheetName = validData?.[0]?.name && validData[0].name !== 'Sheet1';
+    return hasRealData || hasSheetName;
+  }, [validData]);
+
+  // モード別キー生成：編集モード時は絶対に固定
   const componentKey = useMemo(() => {
     if (isEditMode) {
-      // 編集モード：固定キーでフォーカス維持
-      console.log('✏️ 編集モード：固定キー使用');
-      return 'workbook-edit-mode';
+      // 編集モード：何があっても固定キー（フォーカス維持最優先）
+      console.log('✏️ 編集モード：絶対固定キー使用');
+      return `workbook-edit-mode`;
+    } else if (forceResizeUpdate) {
+      // 表示モード時のリサイズ強制更新
+      const key = `workbook-force-resize-${resizeKey}`;
+      console.log('🔄 強制リサイズ：キー生成', key);
+      return key;
     } else {
-      // 表示モード：動的キーで読み込み対応
+      // 表示モード または 読み込み時：動的キーで確実更新
       const sheetName = validData?.[0]?.name || 'default';
       const cellCount = validData?.[0]?.celldata?.length || 0;
       const dataHash = JSON.stringify(validData?.[0]?.celldata?.slice(0, 5)) || '';
       const key = `workbook-view-${sheetName}-${cellCount}-${dataHash.length}`;
-      console.log('📊 表示モード：動的キー生成', key);
+      console.log('📊 表示モード：動的キー生成', key, {isDataLoading});
       return key;
     }
-  }, [isEditMode, validData?.[0]?.name, validData?.[0]?.celldata]);
+  }, [isEditMode, forceResizeUpdate, resizeKey, isDataLoading, validData?.[0]?.name, validData?.[0]?.celldata]);
   
   return (
     <SpreadsheetErrorBoundary onReset={() => {
@@ -348,7 +372,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         {/* 表示モード時の編集無効化オーバーレイ */}
         <div style={{ 
           position: 'relative', 
-          height: 'calc(100% - 88px)', // リサイズハンドル分8px追加で調整
+          height: `${height - 88}px`, // 動的高さからコントロール部分を引いた値
           width: '100%' 
         }}>
           <Workbook
