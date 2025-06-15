@@ -217,10 +217,28 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
         {/* チャットボタン */}
         <button
           onClick={() => setIsChatOpen(!isChatOpen)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40"
-          style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
+          style={{ 
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            width: '56px',
+            height: '56px',
+            backgroundColor: '#2563eb',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '50%',
+            zIndex: 9999,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
         >
-          <MessageCircle className="w-6 h-6" />
+          <MessageCircle size={24} color="white" strokeWidth={2} />
         </button>
 
         {/* チャットパネル */}
