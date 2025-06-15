@@ -211,22 +211,120 @@ DEBUG=pw:api npx playwright test
 
 ## CI/CD統合
 
-このテストは将来的にCI/CDパイプラインに統合可能な構造で設計されています：
+このテストはCI/CDパイプラインに統合可能な構造で設計されています。
 
-**GitHub Actions向け設定例：**
+### 基本的なCI設定
+
+**GitHub Actions設定例** (`.github/workflows/e2e-test.yml`)：
 ```yaml
-- name: Run E2E tests
-  run: |
-    cd e2e-tests
-    npm ci
-    npx playwright install --with-deps
-    npm run test
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install main dependencies
+      run: npm ci
+      
+    - name: Install E2E dependencies
+      run: |
+        cd e2e-tests
+        npm ci
+        
+    - name: Install Playwright Browsers
+      run: |
+        cd e2e-tests
+        npx playwright install --with-deps
+        
+    - name: Run E2E tests
+      run: |
+        cd e2e-tests
+        npm run test
+        
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: e2e-tests/test-results/
+        retention-days: 30
 ```
 
+### CI実行での利点
+
+**自動実行される機能：**
+- ✅ **webServer自動起動** - CI環境でも自動でアプリが立ち上がる
+- ✅ **スクリーンショット** - 失敗時の状況が画像で残る  
+- ✅ **動画録画** - 失敗の経緯が動画で確認可能
+- ✅ **HTMLレポート** - 美しい結果画面がアーティファクトに
+- ✅ **リトライ機能** - 一時的な不安定性に対応
+
+**実行タイミング：**
+- プッシュ時（main, developブランチ）
+- プルリクエスト作成・更新時
+- 手動実行も可能
+
+### 将来の拡張予定
+
+**段階的なCI強化案：**
+1. **現在：テスト実行のみ** - 失敗してもマージ可能（警告表示）
+2. **Phase 2：マージ保護** - 必須ステータスチェック設定
+3. **Phase 3：自動デプロイ** - テスト成功時の自動デプロイ
+4. **Phase 4：マトリックステスト** - 複数ブラウザでの並列実行
+
+**高度な設定例（将来用）：**
+```yaml
+# 複数ブラウザテスト
+strategy:
+  matrix:
+    browser: [chromium, firefox, webkit]
+
+# 必須ステータスチェック設定
+# GitHub > Settings > Branches > Branch protection rules
+# ✅ Require status checks to pass before merging
+# ✅ E2E Tests
+
+# 通知設定
+# ✅ Slack/Teams通知
+# ✅ メール通知
+```
+
+### その他のCI/CDプラットフォーム
+
 **Docker対応：**
-Playwrightの公式Dockerイメージを使用可能：
 ```dockerfile
 FROM mcr.microsoft.com/playwright:v1.53.0-focal
+COPY . /app
+WORKDIR /app/e2e-tests
+RUN npm ci && npx playwright install
+CMD ["npm", "run", "test"]
+```
+
+**GitLab CI：**
+```yaml
+e2e-test:
+  image: mcr.microsoft.com/playwright:v1.53.0-focal
+  script:
+    - cd e2e-tests
+    - npm ci
+    - npx playwright install
+    - npm run test
+  artifacts:
+    when: always
+    paths:
+      - e2e-tests/test-results/
 ```
 
 ## 今後の拡張予定
