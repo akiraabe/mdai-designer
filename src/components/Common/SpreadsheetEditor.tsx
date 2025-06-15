@@ -57,6 +57,12 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   // モード管理：false=表示モード（読み込み対応）、true=編集モード（フォーカス維持）
   const [isEditMode, setIsEditMode] = useState(false);
   
+  // リサイズ機能用の状態
+  const [height, setHeight] = useState(600); // デフォルト高さ
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartY = useRef(0);
+  const startHeight = useRef(600);
+  
   // データが無効な場合のフォールバック（簡略化して無限ループ防止）
   const validData = useMemo(() => {
     if (!data || !Array.isArray(data) || data.length === 0 || !data[0]?.celldata || data[0].celldata.length === 0) {
@@ -143,6 +149,45 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       container.removeEventListener('keydown', handleKeyDown, true);
     };
   }, []);
+  
+  // リサイズ機能のイベントハンドラー
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsResizing(true);
+    resizeStartY.current = e.clientY;
+    startHeight.current = height;
+    e.preventDefault();
+  }, [height]);
+  
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    
+    const deltaY = e.clientY - resizeStartY.current;
+    const newHeight = Math.max(300, Math.min(1000, startHeight.current + deltaY)); // 最小300px、最大1000px
+    setHeight(newHeight);
+  }, [isResizing]);
+  
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+  
+  // グローバルマウスイベントの管理
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ns-resize';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
   
   // onChangeハンドラー（編集モード時のみ動作）
   const handleChange = useCallback((sheets: any) => {
@@ -247,7 +292,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         order: 0
       }]);
     }}>
-      <div ref={containerRef} style={{ height: '80vh', width: '100%', minHeight: '600px' }}>
+      <div ref={containerRef} style={{ height: `${height}px`, width: '100%', minHeight: '300px', position: 'relative' }}>
         {/* モード切り替えコントロール */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', gap: '12px' }}>
           <div style={{ fontSize: '12px', color: 'blue' }}>
@@ -303,7 +348,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         {/* 表示モード時の編集無効化オーバーレイ */}
         <div style={{ 
           position: 'relative', 
-          height: 'calc(100% - 80px)', 
+          height: 'calc(100% - 88px)', // リサイズハンドル分8px追加で調整
           width: '100%' 
         }}>
           <Workbook
@@ -332,6 +377,33 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
               }}
             />
           )}
+        </div>
+        
+        {/* リサイズハンドル */}
+        <div
+          onMouseDown={handleMouseDown}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '8px',
+            cursor: 'ns-resize',
+            backgroundColor: isResizing ? '#10b981' : 'transparent',
+            borderTop: isResizing ? '2px solid #10b981' : '2px solid #e5e7eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}
+        >
+          <div style={{
+            width: '40px',
+            height: '4px',
+            backgroundColor: isResizing ? '#10b981' : '#9ca3af',
+            borderRadius: '2px',
+            transition: 'all 0.2s'
+          }} />
         </div>
       </div>
     </SpreadsheetErrorBoundary>
