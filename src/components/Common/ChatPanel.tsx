@@ -294,7 +294,7 @@ ${tableData}
           return a.c - b.c;
         });
 
-        sortedCells.slice(0, 50).forEach((cell: any, index: number) => {
+        sortedCells.slice(0, 50).forEach((cell: any) => {
           const cellValue = cell.v?.v || cell.v || '';
           const cellRef = String.fromCharCode(65 + cell.c) + (cell.r + 1); // A1形式
           detailedData += `${cellRef}: "${cellValue}"\n`;
@@ -460,7 +460,9 @@ ${tableData}
             border: 'none',
             cursor: 'pointer',
             color: '#6b7280',
-            padding: '4px'
+            padding: '4px',
+            backgroundColor: 'transparent',
+            fontWeight: 'bold'
           }}
         >
           <X className="h-4 w-4" />
@@ -597,7 +599,7 @@ ${tableData}
             disabled={!inputMessage.trim()}
             style={{
               backgroundColor: inputMessage.trim() ? '#3b82f6' : '#d1d5db',
-              color: 'white',
+              color: '#ffffff',
               padding: '16px',
               borderRadius: '12px',
               border: 'none',
@@ -607,7 +609,8 @@ ${tableData}
               height: '60px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              fontWeight: 'bold'
             }}
           >
             <Send className="h-5 w-5" />

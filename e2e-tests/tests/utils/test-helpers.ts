@@ -24,6 +24,79 @@ export class TestHelpers {
   }
 
   /**
+   * プロジェクト作成
+   */
+  async createProject(name: string, description?: string): Promise<void> {
+    // 複数の新規プロジェクトボタンのいずれかをクリック
+    const buttons = [
+      'button:has-text("新規プロジェクト")',
+      'button:has-text("新規プロジェクト作成")'
+    ];
+    
+    let createButton;
+    for (const selector of buttons) {
+      const button = this.page.locator(selector).first();
+      if (await button.isVisible().catch(() => false)) {
+        createButton = button;
+        break;
+      }
+    }
+    
+    if (!createButton) {
+      throw new Error('新規プロジェクト作成ボタンが見つかりません');
+    }
+    
+    await createButton.click();
+    
+    // フォームに入力
+    await this.page.fill('input[placeholder*="プロジェクト"]', name);
+    if (description) {
+      await this.page.fill('textarea[placeholder*="概要"]', description);
+    }
+    
+    // 作成ボタンをクリック
+    await this.page.click('button[type="submit"]:has-text("作成")');
+    
+    // 設計書一覧画面への遷移を待機
+    await this.page.waitForTimeout(1500);
+  }
+
+  /**
+   * 設計書作成
+   */
+  async createDocument(name: string): Promise<void> {
+    // 複数の新規設計書ボタンのいずれかをクリック
+    const buttons = [
+      'button:has-text("新規設計書")',
+      'button:has-text("新規設計書作成")'
+    ];
+    
+    let createButton;
+    for (const selector of buttons) {
+      const button = this.page.locator(selector).first();
+      if (await button.isVisible().catch(() => false)) {
+        createButton = button;
+        break;
+      }
+    }
+    
+    if (!createButton) {
+      throw new Error('新規設計書作成ボタンが見つかりません');
+    }
+    
+    await createButton.click();
+    
+    // フォームに入力
+    await this.page.fill('input[placeholder*="設計書"]', name);
+    
+    // 作成ボタンをクリック
+    await this.page.click('button[type="submit"]:has-text("作成")');
+    
+    // 設計書編集画面への遷移を待機
+    await this.page.waitForTimeout(1500);
+  }
+
+  /**
    * テストデータボタンをクリック
    */
   async clickTestDataButton(): Promise<void> {
@@ -48,7 +121,7 @@ export class TestHelpers {
       '.w-md-editor textarea'
     ];
     
-    let textArea = null;
+    let textArea;
     for (const selector of textAreaSelectors) {
       const element = this.page.locator(selector).first();
       if (await element.isVisible().catch(() => false)) {
@@ -124,13 +197,13 @@ export class TestHelpers {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `playwright-test-${timestamp}.json`;
     
-    // 保存ボタンをクリック
-    const saveButton = this.page.locator('[data-testid="save-button"]');
-    await expect(saveButton).toBeVisible();
+    // エクスポートボタンをクリック
+    const exportButton = this.page.locator('[data-testid="export-button"]');
+    await expect(exportButton).toBeVisible();
     
     // ダウンロード処理を監視（正しいPlaywright書き方）
     const downloadPromise = this.page.waitForEvent('download');
-    await saveButton.click();
+    await exportButton.click();
     
     const download = await downloadPromise;
     await download.saveAs(`downloads/${filename}`);
@@ -143,20 +216,20 @@ export class TestHelpers {
    * ファイル読み込み
    */
   async loadFromFile(filename: string): Promise<void> {
-    // 読み込みボタンをクリック
-    const loadButton = this.page.locator('[data-testid="load-button"]');
-    await expect(loadButton).toBeVisible();
+    // インポートボタンをクリック
+    const importButton = this.page.locator('[data-testid="import-button"]');
+    await expect(importButton).toBeVisible();
     
     // 特定のファイル入力を選択（JSONファイル用）
-    const fileInput = this.page.locator('#load-json');
-    await loadButton.click();
+    const fileInput = this.page.locator('#import-json');
+    await importButton.click();
     
     // ファイルを設定
     await fileInput.setInputFiles(`downloads/${filename}`);
     
-    console.log(`📂 ファイル読み込み完了: ${filename}`);
+    console.log(`📂 ファイルインポート完了: ${filename}`);
     
-    // 読み込み完了まで待機
+    // インポート完了まで待機
     await this.page.waitForTimeout(1500);
   }
 
@@ -164,16 +237,12 @@ export class TestHelpers {
    * 編集モードに切り替え
    */
   async switchToEditMode(): Promise<void> {
-    const toggleSwitch = this.page.locator('[data-testid="edit-mode-toggle"]').first();
+    // まず設計書編集画面にいることを確認
+    await expect(this.page.locator('[data-testid="spreadsheet-container"]')).toBeVisible();
     
-    if (!(await toggleSwitch.isVisible())) {
-      // data-testidが無い場合、スイッチUIを探す
-      const switches = this.page.locator('div[style*="cursor: pointer"][style*="border-radius: 12px"]');
-      await expect(switches.first()).toBeVisible();
-      await switches.first().click();
-    } else {
-      await toggleSwitch.click();
-    }
+    const toggleSwitch = this.page.locator('[data-testid="edit-mode-toggle"]');
+    await expect(toggleSwitch).toBeVisible({ timeout: 10000 });
+    await toggleSwitch.click();
     
     // モード切り替え完了まで待機
     await this.page.waitForTimeout(500);
@@ -183,40 +252,40 @@ export class TestHelpers {
    * 表示モードに切り替え
    */
   async switchToViewMode(): Promise<void> {
-    // 編集モードと同じスイッチを再度クリック
-    await this.switchToEditMode();
+    // まず設計書編集画面にいることを確認
+    await expect(this.page.locator('[data-testid="spreadsheet-container"]')).toBeVisible();
+    
+    const toggleSwitch = this.page.locator('[data-testid="edit-mode-toggle"]');
+    await expect(toggleSwitch).toBeVisible({ timeout: 10000 });
+    await toggleSwitch.click();
+    
+    // モード切り替え完了まで待機
+    await this.page.waitForTimeout(500);
   }
 
   /**
    * スプレッドシートのセルを編集
    */
   async editSpreadsheetCell(cellAddress: string, value: string): Promise<void> {
-    // Fortune-Sheetのセルを探してクリック
-    // セルのクリックは複数の方法で試行
-    const cellSelectors = [
-      `[data-cell="${cellAddress}"]`,
-      `[data-r][data-c]`, // Fortune-Sheetの一般的なセル
-      `.luckysheet-cell`
-    ];
+    // 編集モードになっていることを確認
+    await this.page.waitForTimeout(1000);
     
-    let cellClicked = false;
-    for (const selector of cellSelectors) {
-      const cells = this.page.locator(selector);
-      if (await cells.count() > 0) {
-        await cells.first().click();
-        cellClicked = true;
-        break;
-      }
-    }
+    // Fortune-Sheetのセルテーブル要素を使用
+    const cellTable = this.page.locator('#luckysheet-sheettable_0, .luckysheet-cell-sheettable').first();
+    await expect(cellTable).toBeVisible({ timeout: 5000 });
     
-    if (!cellClicked) {
-      // 座標ベースでスプレッドシートエリアをクリック
-      const spreadsheetArea = this.page.locator('canvas, .fortune-sheet, .luckysheet').first();
-      await spreadsheetArea.click({ position: { x: 100, y: 100 } });
-    }
+    // セルテーブルをクリック（行3、列A）
+    const cellX = 50; // 列Aの概算位置
+    const cellY = 60; // 行3の概算位置
+    
+    await cellTable.click({ position: { x: cellX, y: cellY }, force: true });
+    await this.page.waitForTimeout(500);
     
     // 値を入力
-    await this.page.keyboard.type(value);
+    await this.page.keyboard.type(value, { delay: 100 });
     await this.page.keyboard.press('Enter');
+    
+    // 入力完了を待機
+    await this.page.waitForTimeout(1000);
   }
 }

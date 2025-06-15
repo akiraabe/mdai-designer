@@ -3,7 +3,7 @@ import React from 'react';
 import { FileText, Image, Table } from 'lucide-react';
 
 // 型定義をexport（useTabNavigationで使用するため）
-export type TabId = 'all' | 'conditions' | 'mockup' | 'definitions';
+export type TabId = 'all' | 'conditions' | 'mockup' | 'definitions' | 'supplement';
 
 interface TabInfo {
   id: TabId;
@@ -25,6 +25,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
     { id: 'conditions', label: '表示条件', icon: FileText },
     { id: 'mockup', label: '画面イメージ', icon: Image },
     { id: 'definitions', label: '項目定義', icon: Table },
+    { id: 'supplement', label: '補足説明', icon: FileText },
   ];
 
   return (
@@ -39,6 +40,11 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
+            style={{
+              backgroundColor: activeTab === id ? '#eff6ff' : 'transparent',
+              color: activeTab === id ? '#2563eb' : '#6b7280',
+              fontWeight: 'bold'
+            }}
           >
             <Icon className="w-4 h-4 mr-2" />
             {label}
