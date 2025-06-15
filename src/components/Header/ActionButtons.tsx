@@ -1,25 +1,25 @@
 // src/components/Header/ActionButtons.tsx
 import React from 'react';
-import { Upload, Save } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 
 interface ActionButtonsProps {
-  onLoad: () => void;
-  onSave: () => void;
+  onImport: () => void;
+  onExport: () => void;
   onLoadTestData: () => void;
-  onFileLoad: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFileImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
-  onLoad,
-  onSave,
+  onImport,
+  onExport,
   onLoadTestData,
-  onFileLoad,
+  onFileImport,
 }) => {
   return (
     <div className="flex space-x-3">
       <button
-        data-testid="load-button"
-        onClick={onLoad}
+        data-testid="import-button"
+        onClick={onImport}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -34,18 +34,18 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         }}
       >
         <Upload className="w-4 h-4 mr-2" />
-        読み込み
+        インポート
       </button>
       <input
         type="file"
         accept=".json"
-        onChange={onFileLoad}
+        onChange={onFileImport}
         className="hidden"
-        id="load-json"
+        id="import-json"
       />
       <button
-        data-testid="save-button"
-        onClick={onSave}
+        data-testid="export-button"
+        onClick={onExport}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -59,8 +59,8 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           cursor: 'pointer'
         }}
       >
-        <Save className="w-4 h-4 mr-2" />
-        保存
+        <Download className="w-4 h-4 mr-2" />
+        エクスポート
       </button>
       <button
         data-testid="test-data-button"

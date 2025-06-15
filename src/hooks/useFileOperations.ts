@@ -46,10 +46,10 @@ export const useFileOperations = ({
     }
   }, [setMockupImage]);
 
-  // 保存処理
-  const handleSave = useCallback(() => {
-    console.log('💾 保存実行! セル数:', spreadsheetData[0]?.celldata?.length);
-    console.log('💾 保存するデータ:', spreadsheetData[0]);
+  // エクスポート処理
+  const handleExport = useCallback(() => {
+    console.log('💾 エクスポート実行! セル数:', spreadsheetData[0]?.celldata?.length);
+    console.log('💾 エクスポートするデータ:', spreadsheetData[0]);
     
     const docData: DocumentData = {
       conditions: conditionsMarkdown,
@@ -68,9 +68,9 @@ export const useFileOperations = ({
     URL.revokeObjectURL(url);
   }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage]);
 
-  // 読み込み処理（元のhandleLoadをそのままコピー）
-  const handleLoad = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('📂 読み込み開始');
+  // インポート処理（元のhandleLoadをそのままコピー）
+  const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📂 インポート開始');
     const file = e.target.files?.[0];
     if (file && file.type === 'application/json') {
       const reader = new FileReader();
@@ -81,7 +81,7 @@ export const useFileOperations = ({
             const docData: DocumentData = JSON.parse(result);
             
             // データを復元（詳細ログ付き）
-            console.log('📂 読み込み開始');
+            console.log('📂 インポート開始');
             console.log('📂 JSONファイルの内容:', docData);
             console.log('📂 スプレッドシート部分:', docData.spreadsheet);
             
@@ -244,10 +244,10 @@ export const useFileOperations = ({
             
             setMockupImage(docData.mockup || null);
             
-            alert(`設計書を読み込みました！\nスプレッドシート: ${normalizedSheets.length}シート\nセル数: ${normalizedSheets[0]?.celldata?.length || 0}`);
+            alert(`設計書をインポートしました！\nスプレッドシート: ${normalizedSheets.length}シート\nセル数: ${normalizedSheets[0]?.celldata?.length || 0}`);
           }
         } catch (error) {
-          alert('JSONファイルの読み込みに失敗しました。');
+          alert('JSONファイルのインポートに失敗しました。');
           console.error('Load error:', error);
         }
       };
@@ -261,7 +261,7 @@ export const useFileOperations = ({
 
   return {
     handleImageUpload,
-    handleSave,
-    handleLoad,
+    handleExport,
+    handleImport,
   };
 };

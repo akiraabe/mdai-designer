@@ -10,9 +10,9 @@ import { TestHelpers } from './utils/test-helpers';
  * 3. Markdownエリア編集
  * 4. 項目定義エリア拡大
  * 5. 項目定義エリア縮小
- * 6. ファイル保存
+ * 6. ファイルエクスポート
  * 7. 画面リロード
- * 8. ファイル読み込み
+ * 8. ファイルインポート
  * 9. 最終状態確認
  */
 
@@ -29,7 +29,7 @@ test.describe('設計書エディタ統合テスト', () => {
     await page.waitForLoadState('networkidle');
   });
 
-  test('基本操作フロー：編集→保存→読み込み', async ({ page }) => {
+  test('基本操作フロー：編集→エクスポート→インポート', async ({ page }) => {
     console.log('🎬 統合テストシナリオ開始');
 
     // 1. 画面初期化（初期表示）
@@ -62,11 +62,11 @@ test.describe('設計書エディタ統合テスト', () => {
     await page.waitForTimeout(500);
     await helpers.takeFullPageScreenshot('05-resized-small');
 
-    // 6. ファイル保存
-    console.log('📸 Step 6: ファイル保存');
+    // 6. ファイルエクスポート
+    console.log('📸 Step 6: ファイルエクスポート');
     const savedFilename = await helpers.saveToFile();
-    await helpers.takeFullPageScreenshot('06-after-save');
-    console.log(`💾 保存完了: ${savedFilename}`);
+    await helpers.takeFullPageScreenshot('06-after-export');
+    console.log(`💾 エクスポート完了: ${savedFilename}`);
 
     // 7. 画面リロード
     console.log('📸 Step 7: 画面リロード');
@@ -74,11 +74,11 @@ test.describe('設計書エディタ統合テスト', () => {
     await page.waitForLoadState('networkidle');
     await helpers.takeFullPageScreenshot('07-after-reload');
 
-    // 8. ファイル読み込み
-    console.log('📸 Step 8: ファイル読み込み');
+    // 8. ファイルインポート
+    console.log('📸 Step 8: ファイルインポート');
     await helpers.loadFromFile(savedFilename);
-    await page.waitForTimeout(1000); // 読み込み完了待機
-    await helpers.takeFullPageScreenshot('08-after-load');
+    await page.waitForTimeout(1000); // インポート完了待機
+    await helpers.takeFullPageScreenshot('08-after-import');
 
     // 9. 最終確認
     console.log('✅ Step 9: 最終確認');
@@ -94,7 +94,7 @@ test.describe('設計書エディタ統合テスト', () => {
     console.log('🎉 統合テスト完了！');
   });
 
-  test('編集モード切り替えテスト', async ({ page }) => {
+  test('編集モード切り替えテスト', async () => {
     console.log('🎬 編集モード切り替えテスト開始');
 
     // 初期状態（表示モード）

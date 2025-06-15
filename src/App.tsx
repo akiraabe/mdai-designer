@@ -1,207 +1,89 @@
-// src/App.tsx
-import React, { useState } from 'react';
+// src/App.tsx - プロジェクト階層管理システム
+import React from 'react';
 import './App.css';
-import { MessageCircle } from 'lucide-react';
-
-// CopilotKit
-import { CopilotKit } from '@copilotkit/react-core';
-
-// Chat関連
-import { ChatPanel } from './components/Common/ChatPanel';
 
 // カスタムフック
-import { useFileOperations } from './hooks/useFileOperations';
-import { useSpreadsheetOperations } from './hooks/useSpreadsheetOperations';
-import { useTabNavigation } from './hooks/useTabNavigation';
-import { useDocumentState } from './hooks/useDocumentState';
+import { useAppState } from './hooks/useAppState';
 
 // UIコンポーネント
-import { DocumentHeader } from './components/Header/DocumentHeader';
-import { ActionButtons } from './components/Header/ActionButtons';
-import { TabNavigation } from './components/Navigation/TabNavigation';
-import { ConditionsSection } from './components/Content/ConditionsSection';
-import { MockupSection } from './components/Content/MockupSection';
-import { DefinitionsSection } from './components/Content/DefinitionsSection';
-import { SupplementSection } from './components/Content/SupplementSection';
-
-// 型定義
-// interface DocumentData {
-//   conditions: string;
-//   supplement: string;
-//   spreadsheet: any; // Fortune-Sheetの完全なJSON構造
-//   mockup: string | null;
-//   timestamp: string;
-// }
+import { ProjectListView } from './components/Project/ProjectListView';
+import { DocumentListView } from './components/Document/DocumentListView';
+import { DocumentEditView } from './components/Document/DocumentEditView';
 
 // メインコンポーネント
 const App: React.FC = () => {
-  // チャットパネル状態
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  
-  // タブナビゲーションフック
-  const { activeTab, setActiveTab } = useTabNavigation();
-  
-  // ドキュメント状態フック
+  // アプリケーション状態管理
   const {
-    conditionsMarkdown,
-    supplementMarkdown,
-    spreadsheetData,
-    mockupImage,
-    setConditionsMarkdown,
-    setSupplementMarkdown,
-    setSpreadsheetData,
-    setMockupImage,
-  } = useDocumentState();
+    navigationState,
+    currentDocument,
+    currentProject,
+    projects,
+    currentDocuments,
+    handleCreateProject,
+    handleCreateDocument,
+    handleSelectProject,
+    handleSelectDocument,
+    handleUpdateProject,
+    handleUpdateDocument,
+    handleDeleteProject,
+    handleDeleteDocument,
+    handleGoBack
+  } = useAppState();
 
-  // ファイル操作フック
-  const {
-    handleImageUpload,
-    handleSave,
-    handleLoad,
-  } = useFileOperations({
-    conditionsMarkdown,
-    supplementMarkdown,
-    spreadsheetData,
-    mockupImage,
-    setConditionsMarkdown,
-    setSupplementMarkdown,
-    setSpreadsheetData,
-    setMockupImage,
-  });
-
-  // スプレッドシート操作フック
-  const {
-    handleLoadTestData,
-  } = useSpreadsheetOperations({
-    spreadsheetData,
-    setSpreadsheetData,
-  });
-
-
+  // 画面モードに応じたレンダリング
+  const renderCurrentView = () => {
+    switch (navigationState.mode) {
+      case 'project-list':
+        return (
+          <ProjectListView
+            projects={projects}
+            onCreateProject={handleCreateProject}
+            onSelectProject={handleSelectProject}
+            onUpdateProject={handleUpdateProject}
+            onDeleteProject={handleDeleteProject}
+          />
+        );
+      
+      case 'document-list':
+        if (!currentProject) {
+          console.error('プロジェクトが選択されていません');
+          return <div>エラー: プロジェクトが見つかりません</div>;
+        }
+        return (
+          <DocumentListView
+            project={currentProject}
+            documents={currentDocuments}
+            onCreateDocument={handleCreateDocument}
+            onSelectDocument={handleSelectDocument}
+            onUpdateDocument={(documentId, updates) => handleUpdateDocument(documentId, updates)}
+            onDeleteDocument={handleDeleteDocument}
+            onGoBack={handleGoBack}
+          />
+        );
+      
+      case 'document-edit':
+        if (!currentDocument || !currentProject) {
+          console.error('設計書またはプロジェクトが選択されていません');
+          return <div>エラー: 設計書が見つかりません</div>;
+        }
+        return (
+          <DocumentEditView
+            document={currentDocument}
+            project={currentProject}
+            onUpdateDocument={handleUpdateDocument}
+            onGoBack={handleGoBack}
+          />
+        );
+      
+      default:
+        return <div>不明な画面モードです</div>;
+    }
+  };
 
   return (
-    <CopilotKit
-      runtimeUrl="/api/copilotkit" // ダミーエンドポイント
-    >
-      <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
-      {/* ヘッダー */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <div className="flex justify-between items-center">
-          <DocumentHeader
-            title="ユーザー管理画面 設計書"
-            updateDate={new Date().toLocaleDateString('ja-JP')}
-            author="設計チーム"
-          />
-          <ActionButtons
-            onLoad={() => {
-              const input = document.getElementById('load-json') as HTMLInputElement;
-              input?.click();
-            }}
-            onSave={handleSave}
-            onLoadTestData={handleLoadTestData}
-            onFileLoad={handleLoad}
-          />
-        </div>
-      </div>
-
-      {/* タブナビゲーション */}
-      <TabNavigation
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-
-      {/* メインコンテンツ */}
-      <div className="bg-white rounded-b-lg shadow-sm p-6">
-        {/* 表示条件 */}
-        <div style={{ display: (activeTab === 'all' || activeTab === 'conditions') ? 'block' : 'none' }}>
-          <ConditionsSection
-            conditionsMarkdown={conditionsMarkdown}
-            onConditionsChange={setConditionsMarkdown}
-          />
-        </div>
-
-        {/* 画面イメージ */}
-        <div style={{ display: (activeTab === 'all' || activeTab === 'mockup') ? 'block' : 'none' }}>
-          <MockupSection
-            mockupImage={mockupImage}
-            onImageUpload={handleImageUpload}
-          />
-        </div>
-
-        {/* 項目定義 */}
-        <div style={{ display: (activeTab === 'all' || activeTab === 'definitions') ? 'block' : 'none' }}>
-          <DefinitionsSection
-            spreadsheetData={spreadsheetData}
-            onSpreadsheetChange={setSpreadsheetData}
-          />
-        </div>
-
-        {/* 補足説明 */}
-        <div style={{ display: activeTab === 'all' ? 'block' : 'none' }}>
-          <SupplementSection
-            supplementMarkdown={supplementMarkdown}
-            onSupplementChange={setSupplementMarkdown}
-          />
-        </div>
-      </div>
-
-        {/* フッター */}
-        <div className="mt-6 text-center text-sm text-gray-500">
-          生成AI活用設計工程 - 統合設計書システム v2.0 (Vite + TypeScript)
-        </div>
-      </div>
-
-      {/* フローティングチャットボタン */}
-      {!isChatOpen && (
-        <button
-          onClick={() => {
-            console.log('チャットボタンクリック！');
-            setIsChatOpen(true);
-          }}
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            padding: '12px',
-            borderRadius: '50%',
-            border: 'none',
-            boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
-            cursor: 'pointer',
-            zIndex: 40,
-            width: '56px',
-            height: '56px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.1)';
-            e.target.style.backgroundColor = '#2563eb';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = 'scale(1)';
-            e.target.style.backgroundColor = '#3b82f6';
-          }}
-          title="設計アシスタント"
-        >
-          <MessageCircle className="h-6 w-6" />
-        </button>
-      )}
-
-      {/* チャットパネル */}
-      <ChatPanel
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        conditionsMarkdown={conditionsMarkdown}
-        supplementMarkdown={supplementMarkdown}
-        spreadsheetData={spreadsheetData}
-        mockupImage={mockupImage}
-        onConditionsMarkdownUpdate={setConditionsMarkdown}
-      />
-    </CopilotKit>
+    <div className="min-h-screen bg-gray-50">
+      {renderCurrentView()}
+    </div>
   );
 };
 

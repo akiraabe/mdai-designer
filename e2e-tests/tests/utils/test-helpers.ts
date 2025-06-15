@@ -124,13 +124,13 @@ export class TestHelpers {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `playwright-test-${timestamp}.json`;
     
-    // 保存ボタンをクリック
-    const saveButton = this.page.locator('[data-testid="save-button"]');
-    await expect(saveButton).toBeVisible();
+    // エクスポートボタンをクリック
+    const exportButton = this.page.locator('[data-testid="export-button"]');
+    await expect(exportButton).toBeVisible();
     
     // ダウンロード処理を監視（正しいPlaywright書き方）
     const downloadPromise = this.page.waitForEvent('download');
-    await saveButton.click();
+    await exportButton.click();
     
     const download = await downloadPromise;
     await download.saveAs(`downloads/${filename}`);
@@ -143,20 +143,20 @@ export class TestHelpers {
    * ファイル読み込み
    */
   async loadFromFile(filename: string): Promise<void> {
-    // 読み込みボタンをクリック
-    const loadButton = this.page.locator('[data-testid="load-button"]');
-    await expect(loadButton).toBeVisible();
+    // インポートボタンをクリック
+    const importButton = this.page.locator('[data-testid="import-button"]');
+    await expect(importButton).toBeVisible();
     
     // 特定のファイル入力を選択（JSONファイル用）
-    const fileInput = this.page.locator('#load-json');
-    await loadButton.click();
+    const fileInput = this.page.locator('#import-json');
+    await importButton.click();
     
     // ファイルを設定
     await fileInput.setInputFiles(`downloads/${filename}`);
     
-    console.log(`📂 ファイル読み込み完了: ${filename}`);
+    console.log(`📂 ファイルインポート完了: ${filename}`);
     
-    // 読み込み完了まで待機
+    // インポート完了まで待機
     await this.page.waitForTimeout(1500);
   }
 
