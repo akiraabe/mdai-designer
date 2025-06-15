@@ -283,11 +283,11 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     return hasRealData || hasSheetName;
   }, [validData]);
 
-  // モード別キー生成：編集モード時は絶対に固定
+  // モード別キー生成：編集モード時は絶対に固定（ただしリサイズ時は例外）
   const componentKey = useMemo(() => {
-    if (isEditMode) {
-      // 編集モード：何があっても固定キー（フォーカス維持最優先）
-      console.log('✏️ 編集モード：絶対固定キー使用');
+    if (isEditMode && !forceResizeUpdate) {
+      // 編集モード（リサイズ時以外）：固定キー（フォーカス維持最優先）
+      console.log('✏️ 編集モード：固定キー使用');
       return `workbook-edit-mode`;
     } else if (forceResizeUpdate) {
       // 表示モード時のリサイズ強制更新
