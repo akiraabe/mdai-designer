@@ -121,6 +121,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
               <button
                 onClick={onGoBack}
                 className="flex items-center px-3 py-2 bg-gray-600 border border-gray-700 text-white hover:bg-gray-700 rounded-lg mr-4 font-bold"
+                style={{ backgroundColor: '#4b5563', color: '#ffffff', fontWeight: 'bold' }}
               >
                 <ArrowLeft className="w-5 h-5 mr-1" />
                 戻る
@@ -217,6 +218,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
         <button
           onClick={() => setIsChatOpen(!isChatOpen)}
           className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-40"
+          style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
         >
           <MessageCircle className="w-6 h-6" />
         </button>

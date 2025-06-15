@@ -74,7 +74,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
         <button
           onClick={onGoBack}
           className="flex items-center px-3 py-2 bg-gray-600 text-white border border-gray-700 hover:bg-gray-700 rounded-lg mr-4 font-bold shadow-md"
-          style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
+          style={{ backgroundColor: '#4b5563', color: '#ffffff', fontWeight: 'bold' }}
         >
           <ArrowLeft className="w-5 h-5 mr-1" />
           戻る
@@ -98,6 +98,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
         <button
           onClick={() => setShowCreateForm(true)}
           className="flex items-center px-4 py-2 bg-green-500 text-white border border-green-600 rounded-lg hover:bg-green-600 transition-colors font-bold shadow-md"
+          style={{ backgroundColor: '#22c55e', color: '#ffffff', fontWeight: 'bold' }}
         >
           <Plus className="w-5 h-5 mr-2" />
           新規設計書
@@ -126,6 +127,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
               <button
                 type="submit"
                 className="px-4 py-2 bg-green-500 text-white border border-green-600 rounded-md hover:bg-green-600 font-bold shadow-md"
+                style={{ backgroundColor: '#22c55e', color: '#ffffff', fontWeight: 'bold' }}
               >
                 作成
               </button>
@@ -136,7 +138,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                   setFormData({ name: '' });
                 }}
                 className="px-4 py-2 bg-gray-600 text-white border border-gray-700 rounded-md hover:bg-gray-700 font-bold shadow-md"
-                style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
+                style={{ backgroundColor: '#4b5563', color: '#ffffff', fontWeight: 'bold' }}
               >
                 キャンセル
               </button>
@@ -154,6 +156,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
           <button
             onClick={() => setShowCreateForm(true)}
             className="inline-flex items-center px-4 py-2 bg-green-500 text-white border border-green-600 rounded-lg hover:bg-green-600 font-bold shadow-md"
+            style={{ backgroundColor: '#22c55e', color: '#ffffff', fontWeight: 'bold' }}
           >
             <Plus className="w-5 h-5 mr-2" />
             新規設計書作成
@@ -179,6 +182,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                     <button
                       type="submit"
                       className="px-3 py-1 bg-green-500 text-white border border-green-600 text-sm rounded hover:bg-green-600 font-bold"
+                      style={{ backgroundColor: '#22c55e', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       保存
                     </button>
@@ -186,7 +190,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                       type="button"
                       onClick={cancelEdit}
                       className="px-3 py-1 bg-gray-600 text-white border border-gray-700 text-sm rounded hover:bg-gray-700 font-bold"
-                      style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
+                      style={{ backgroundColor: '#4b5563', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       キャンセル
                     </button>
@@ -259,6 +263,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                         startEdit(document);
                       }}
                       className="flex items-center px-3 py-1 text-sm text-white bg-green-500 border border-green-600 hover:bg-green-600 rounded font-bold"
+                      style={{ backgroundColor: '#22c55e', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       <Edit2 className="w-4 h-4 mr-1" />
                       名前変更
@@ -269,6 +274,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                         handleDelete(document);
                       }}
                       className="flex items-center px-3 py-1 text-sm text-white bg-red-500 border border-red-600 hover:bg-red-600 rounded font-bold"
+                      style={{ backgroundColor: '#ef4444', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       削除

@@ -40,6 +40,11 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
+            style={{
+              backgroundColor: activeTab === id ? '#eff6ff' : 'transparent',
+              color: activeTab === id ? '#2563eb' : '#6b7280',
+              fontWeight: 'bold'
+            }}
           >
             <Icon className="w-4 h-4 mr-2" />
             {label}

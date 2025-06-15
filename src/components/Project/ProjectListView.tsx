@@ -80,7 +80,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
         <button
           onClick={() => setShowCreateForm(true)}
           className="flex items-center px-4 py-2 bg-blue-600 text-white border-2 border-blue-800 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-lg"
-          style={{ backgroundColor: '#1d4ed8', color: '#ffffff' }}
+          style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
         >
           <Plus className="w-5 h-5 mr-2" />
           新規プロジェクト
@@ -121,6 +121,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
               <button
                 type="submit"
                 className="px-4 py-2 bg-blue-500 text-white border border-blue-600 rounded-md hover:bg-blue-600 font-bold shadow-md"
+                style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
               >
                 作成
               </button>
@@ -131,7 +132,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                   setFormData({ name: '', description: '' });
                 }}
                 className="px-4 py-2 bg-gray-600 text-white border border-gray-700 rounded-md hover:bg-gray-700 font-bold shadow-md"
-                style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
+                style={{ backgroundColor: '#4b5563', color: '#ffffff', fontWeight: 'bold' }}
               >
                 キャンセル
               </button>
@@ -149,6 +150,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           <button
             onClick={() => setShowCreateForm(true)}
             className="inline-flex items-center px-4 py-2 bg-blue-500 text-white border border-blue-600 rounded-lg hover:bg-blue-600 font-bold shadow-md"
+            style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
           >
             <Plus className="w-5 h-5 mr-2" />
             新規プロジェクト作成
@@ -182,6 +184,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                     <button
                       type="submit"
                       className="px-3 py-1 bg-blue-500 text-white border border-blue-600 text-sm rounded hover:bg-blue-600 font-bold"
+                      style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       保存
                     </button>
@@ -189,7 +192,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       type="button"
                       onClick={cancelEdit}
                       className="px-3 py-1 bg-gray-600 text-white border border-gray-700 text-sm rounded hover:bg-gray-700 font-bold"
-                      style={{ backgroundColor: '#4b5563', color: '#ffffff' }}
+                      style={{ backgroundColor: '#4b5563', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       キャンセル
                     </button>
@@ -248,6 +251,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         startEdit(project);
                       }}
                       className="flex items-center px-3 py-1 text-sm text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 rounded font-bold"
+                      style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       <Edit2 className="w-4 h-4 mr-1" />
                       編集
@@ -258,6 +262,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                         handleDelete(project);
                       }}
                       className="flex items-center px-3 py-1 text-sm text-white bg-red-500 border border-red-600 hover:bg-red-600 rounded font-bold"
+                      style={{ backgroundColor: '#ef4444', color: '#ffffff', fontWeight: 'bold' }}
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       削除

@@ -67,6 +67,7 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
             <button
               onClick={this.handleReset}
               className="flex items-center px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              style={{ backgroundColor: '#ef4444', color: '#ffffff', fontWeight: 'bold' }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               リセット
@@ -74,6 +75,7 @@ export class SpreadsheetErrorBoundary extends Component<Props, State> {
             <button
               onClick={() => window.location.reload()}
               className="flex items-center px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+              style={{ backgroundColor: '#4b5563', color: '#ffffff', fontWeight: 'bold' }}
             >
               ページ再読み込み
             </button>
