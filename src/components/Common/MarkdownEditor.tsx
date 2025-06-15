@@ -13,8 +13,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = React.memo(({
   onChange
 }) => {
   return (
-    <div data-color-mode="light">
+    <div data-color-mode="light" data-testid="markdown-editor-container">
       <MDEditor
+        data-testid="markdown-editor"
         value={value}
         onChange={(val) => onChange(val || '')}
         height={400}

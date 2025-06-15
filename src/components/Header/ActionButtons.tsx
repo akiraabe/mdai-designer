@@ -18,6 +18,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   return (
     <div className="flex space-x-3">
       <button
+        data-testid="load-button"
         onClick={onLoad}
         style={{
           display: 'flex',
@@ -43,6 +44,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         id="load-json"
       />
       <button
+        data-testid="save-button"
         onClick={onSave}
         style={{
           display: 'flex',
@@ -61,6 +63,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         保存
       </button>
       <button
+        data-testid="test-data-button"
         onClick={onLoadTestData}
         style={{
           display: 'flex',

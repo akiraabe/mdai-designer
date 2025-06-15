@@ -316,7 +316,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         order: 0
       }]);
     }}>
-      <div ref={containerRef} style={{ height: `${height}px`, width: '100%', minHeight: '300px', position: 'relative' }}>
+      <div ref={containerRef} data-testid="spreadsheet-container" style={{ height: `${height}px`, width: '100%', minHeight: '300px', position: 'relative' }}>
         {/* モード切り替えコントロール */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', gap: '12px' }}>
           <div style={{ fontSize: '12px', color: 'blue' }}>
@@ -327,6 +327,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '11px', color: '#6b7280' }}>表示</span>
             <div
+              data-testid="edit-mode-toggle"
               onClick={() => setIsEditMode(!isEditMode)}
               style={{
                 width: '44px',
@@ -370,7 +371,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         </div>
         
         {/* 表示モード時の編集無効化オーバーレイ */}
-        <div style={{ 
+        <div data-testid="workbook-container" style={{ 
           position: 'relative', 
           height: `${height - 88}px`, // 動的高さからコントロール部分を引いた値
           width: '100%' 
@@ -405,6 +406,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         
         {/* リサイズハンドル */}
         <div
+          data-testid="resize-handle"
           onMouseDown={handleMouseDown}
           style={{
             position: 'absolute',
