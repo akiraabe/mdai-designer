@@ -234,17 +234,23 @@ export const useFileOperations = ({
             console.log('📂 最終的なスプレッドシートデータ:', normalizedSheets);
             console.log('📂 最終セル数:', normalizedSheets[0]?.celldata?.length);
             
+            // 状態を順序立てて更新（デバウンス対応）
             setConditionsMarkdown(docData.conditions || '');
             setSupplementMarkdown(docData.supplement || '');
-            console.log('📂 Reactステート更新実行');
-            
-            // テストデータボタンと同じシンプルな処理
-            setSpreadsheetData(normalizedSheets);
-            console.log('📂 スプレッドシートデータ更新完了');
-            
             setMockupImage(docData.mockup || null);
             
-            alert(`設計書をインポートしました！\nスプレッドシート: ${normalizedSheets.length}シート\nセル数: ${normalizedSheets[0]?.celldata?.length || 0}`);
+            console.log('📂 Reactステート更新実行');
+            
+            // スプレッドシートデータは最後に更新し、少し遅延を入れる
+            setTimeout(() => {
+              setSpreadsheetData(normalizedSheets);
+              console.log('📂 スプレッドシートデータ更新完了（遅延実行）');
+              
+              // さらに少し遅延してアラート表示
+              setTimeout(() => {
+                alert(`設計書をインポートしました！\nスプレッドシート: ${normalizedSheets.length}シート\nセル数: ${normalizedSheets[0]?.celldata?.length || 0}`);
+              }, 200);
+            }, 100);
           }
         } catch (error) {
           alert('JSONファイルのインポートに失敗しました。');

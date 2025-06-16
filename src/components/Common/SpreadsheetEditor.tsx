@@ -62,6 +62,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [resizeKey, setResizeKey] = useState(0); // 強制再マウント用
   const [forceResizeUpdate, setForceResizeUpdate] = useState(false); // リサイズ強制フラグ
+  const [forceImportUpdate, setForceImportUpdate] = useState(0); // インポート強制更新用
   const resizeStartY = useRef(0);
   const startHeight = useRef(600);
   
@@ -91,6 +92,27 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     return data;
   }, [data]);
   
+  // インポート検出とキー強制更新
+  useEffect(() => {
+    const dataTimestamp = Date.now();
+    const prevTimestamp = localStorage.getItem('last-data-change-timestamp');
+    
+    // データが大幅に変更された場合（インポート等）を検出
+    if (validData && validData.length > 0 && validData[0]?.celldata?.length > 0) {
+      const currentCellCount = validData[0].celldata.length;
+      const prevCellCount = parseInt(localStorage.getItem('prev-cell-count') || '0');
+      
+      // セル数が大幅に変化した場合はインポートと判断
+      if (Math.abs(currentCellCount - prevCellCount) > 5) {
+        console.log('📂 インポート検出！強制キー更新実行');
+        setForceImportUpdate(prev => prev + 1);
+        localStorage.setItem('prev-cell-count', currentCellCount.toString());
+      }
+    }
+    
+    localStorage.setItem('last-data-change-timestamp', dataTimestamp.toString());
+  }, [validData]);
+
   // データ読み込み処理（両モード対応）
   useEffect(() => {
     console.log('📊 データ読み込み実行（モード:', isEditMode ? '編集' : '表示', ')');
@@ -283,10 +305,18 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     return hasRealData || hasSheetName;
   }, [validData]);
 
+  // キー生成用の値を別途抽出（ESLint対応）
+  const sheetName = validData?.[0]?.name || 'default';
+  const cellCount = validData?.[0]?.celldata?.length || 0;
+  
+  const cellDataSlice = useMemo(() => {
+    return validData?.[0]?.celldata?.slice(0, 5) || [];
+  }, [validData]);
+
   // モード別キー生成：編集モード時は絶対に固定（ただしリサイズ時は例外）
   const componentKey = useMemo(() => {
-    if (isEditMode && !forceResizeUpdate) {
-      // 編集モード（リサイズ時以外）：固定キー（フォーカス維持最優先）
+    if (isEditMode && !forceResizeUpdate && forceImportUpdate === 0) {
+      // 編集モード（リサイズ・インポート時以外）：固定キー（フォーカス維持最優先）
       console.log('✏️ 編集モード：固定キー使用');
       return `workbook-edit-mode`;
     } else if (forceResizeUpdate) {
@@ -294,16 +324,19 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
       const key = `workbook-force-resize-${resizeKey}`;
       console.log('🔄 強制リサイズ：キー生成', key);
       return key;
+    } else if (forceImportUpdate > 0) {
+      // インポート時の強制更新
+      const key = `workbook-force-import-${forceImportUpdate}`;
+      console.log('📂 強制インポート更新：キー生成', key);
+      return key;
     } else {
       // 表示モード または 読み込み時：動的キーで確実更新
-      const sheetName = validData?.[0]?.name || 'default';
-      const cellCount = validData?.[0]?.celldata?.length || 0;
-      const dataHash = JSON.stringify(validData?.[0]?.celldata?.slice(0, 5)) || '';
+      const dataHash = JSON.stringify(cellDataSlice) || '';
       const key = `workbook-view-${sheetName}-${cellCount}-${dataHash.length}`;
       console.log('📊 表示モード：動的キー生成', key, {isDataLoading});
       return key;
     }
-  }, [isEditMode, forceResizeUpdate, resizeKey, isDataLoading, validData?.[0]?.name, validData?.[0]?.celldata]);
+  }, [isEditMode, forceResizeUpdate, resizeKey, forceImportUpdate, isDataLoading, sheetName, cellCount, cellDataSlice]);
   
   return (
     <SpreadsheetErrorBoundary onReset={() => {
