@@ -36,6 +36,8 @@ interface DocumentEditViewProps {
     supplement?: string;
     spreadsheet?: any;
     mockup?: string | null;
+    domainModels?: any[];
+    modelRelationships?: any[];
   }) => void;
   onGoBack: () => void;
 }
@@ -74,7 +76,9 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     setSupplementMarkdown(document.supplement || '');
     setSpreadsheetData(document.spreadsheet || []);
     setMockupImage(document.mockup || null);
-  }, [document, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage]);
+    setDomainModels(document.domainModels || []);
+    setModelRelationships(document.modelRelationships || []);
+  }, [document, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setDomainModels, setModelRelationships]);
 
   // データ変更時の自動保存
   useEffect(() => {
@@ -83,14 +87,16 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
         conditions: conditionsMarkdown,
         supplement: supplementMarkdown,
         spreadsheet: spreadsheetData,
-        mockup: mockupImage
+        mockup: mockupImage,
+        domainModels: domainModels,
+        modelRelationships: modelRelationships
       });
     };
 
     // 初期ロード以外で保存
     const timer = setTimeout(saveData, 1000);
     return () => clearTimeout(timer);
-  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, document.id, onUpdateDocument]);
+  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, domainModels, modelRelationships, document.id, onUpdateDocument]);
 
   // ファイル操作フック
   const {
