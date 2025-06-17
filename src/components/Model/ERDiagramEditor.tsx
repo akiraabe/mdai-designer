@@ -33,13 +33,31 @@ export const ERDiagramEditor: React.FC<ERDiagramEditorProps> = ({
   onRelationshipsUpdate
 }) => {
 
+  // モデル編集
+  const handleEditModel = useCallback((model: DomainModel) => {
+    // TODO: モデル編集モーダルを開く
+    console.log('Edit model:', model);
+  }, []);
+
+  // モデル削除
+  const handleDeleteModel = useCallback((modelId: string) => {
+    const updatedModels = models.filter(m => m.id !== modelId);
+    onModelsUpdate(updatedModels);
+    
+    // 関連するエッジも削除
+    const updatedRelationships = relationships.filter(
+      r => r.sourceModel !== modelId && r.targetModel !== modelId
+    );
+    onRelationshipsUpdate(updatedRelationships);
+  }, [models, relationships, onModelsUpdate, onRelationshipsUpdate]);
+
   // React Flow用のノードタイプを定義
   const nodeTypes: NodeTypes = useMemo(() => ({
     entity: EntityNode
   }), []);
 
   // モデルをReact FlowのNode形式に変換
-  const initialNodes: Node[] = models.map(model => ({
+  const initialNodes: Node[] = useMemo(() => models.map(model => ({
     id: model.id,
     type: 'entity',
     position: model.position || { x: Math.random() * 400, y: Math.random() * 300 },
@@ -48,10 +66,10 @@ export const ERDiagramEditor: React.FC<ERDiagramEditorProps> = ({
       onEdit: handleEditModel,
       onDelete: handleDeleteModel
     }
-  }));
+  })), [models, handleEditModel, handleDeleteModel]);
 
   // 関係をReact FlowのEdge形式に変換
-  const initialEdges: Edge[] = relationships.map(rel => ({
+  const initialEdges: Edge[] = useMemo(() => relationships.map(rel => ({
     id: rel.id,
     source: rel.sourceModel,
     target: rel.targetModel,
@@ -65,28 +83,19 @@ export const ERDiagramEditor: React.FC<ERDiagramEditorProps> = ({
       color: '#374151'
     },
     style: { stroke: '#374151' }
-  }));
+  })), [relationships]);
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // モデル編集
-  function handleEditModel(model: DomainModel) {
-    // TODO: モデル編集モーダルを開く
-    console.log('Edit model:', model);
-  }
+  // propsが変更されたときにノードとエッジを更新
+  React.useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
 
-  // モデル削除
-  function handleDeleteModel(modelId: string) {
-    const updatedModels = models.filter(m => m.id !== modelId);
-    onModelsUpdate(updatedModels);
-    
-    // 関連するエッジも削除
-    const updatedRelationships = relationships.filter(
-      r => r.sourceModel !== modelId && r.targetModel !== modelId
-    );
-    onRelationshipsUpdate(updatedRelationships);
-  }
+  React.useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
 
   // 新しいモデル追加
   const handleAddModel = useCallback(() => {
