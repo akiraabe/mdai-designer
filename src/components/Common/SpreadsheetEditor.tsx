@@ -95,10 +95,9 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
   // インポート検出とキー強制更新
   useEffect(() => {
     const dataTimestamp = Date.now();
-    const prevTimestamp = localStorage.getItem('last-data-change-timestamp');
     
     // データが大幅に変更された場合（インポート等）を検出
-    if (validData && validData.length > 0 && validData[0]?.celldata?.length > 0) {
+    if (validData && validData.length > 0 && validData[0]?.celldata && validData[0].celldata.length > 0) {
       const currentCellCount = validData[0].celldata.length;
       const prevCellCount = parseInt(localStorage.getItem('prev-cell-count') || '0');
       

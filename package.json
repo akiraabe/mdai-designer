@@ -15,6 +15,7 @@
     "@fortune-sheet/react": "^1.0.2",
     "@uiw/react-md-editor": "^4.0.7",
     "lucide-react": "^0.514.0",
+    "openai": "^5.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
