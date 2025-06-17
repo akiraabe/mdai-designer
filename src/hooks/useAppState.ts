@@ -119,7 +119,7 @@ export const useAppState = () => {
   }) => {
     const newState = updateDocument(appState, documentId, updates);
     setAppState(newState);
-    console.log('✅ 設計書更新完了');
+    // console.log('✅ 設計書更新完了');
   }, [appState]);
 
   // プロジェクト削除

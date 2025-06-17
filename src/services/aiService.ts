@@ -369,22 +369,24 @@ class AIService {
               supplement: jsonData.content || jsonData.supplement
             };
           }
-        } catch (parseError) {
+        } catch (parseError: unknown) {
           console.error('❌ JSONパースエラー:', parseError);
-          console.log('📝 パースエラー詳細:', parseError.message);
+          
+          const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+          console.log('📝 パースエラー詳細:', errorMessage);
           
           // エラー位置周辺を表示
-          if (parseError.message.includes('position')) {
-            const position = parseInt(parseError.message.match(/position (\d+)/)?.[1] || '0');
+          if (errorMessage.includes('position')) {
+            const position = parseInt(errorMessage.match(/position (\d+)/)?.[1] || '0');
             const start = Math.max(0, position - 50);
-            const end = Math.min(cleanJson.length, position + 50);
-            console.log('🔍 エラー位置周辺:', cleanJson.substring(start, end));
+            const end = Math.min(matchedPattern[1].length, position + 50);
+            console.log('🔍 エラー位置周辺:', matchedPattern[1].substring(start, end));
             console.log('👆 エラー位置:', ' '.repeat(Math.min(50, position - start)) + '^');
           }
           
           // JSONの修復を試行
           console.log('🔧 JSON修復を試行中...');
-          const repairedJson = this.repairJSON(cleanJson);
+          const repairedJson = this.repairJSON(matchedPattern[1]);
           if (repairedJson) {
             try {
               const jsonData = JSON.parse(repairedJson);
