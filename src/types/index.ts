@@ -10,10 +10,14 @@ export interface Project {
   documentIds: string[];  // 配下の設計書ID一覧
 }
 
+// 設計書タイプ
+export type DocumentType = 'screen' | 'model' | 'api' | 'database';
+
 export interface Document {
   id: string;              // UUID
   projectId: string;       // 親プロジェクトID
   name: string;            // 設計書名
+  type: DocumentType;      // 設計書タイプ
   conditions: string;      // 表示条件 (Markdown)
   supplement: string;      // 補足説明 (Markdown)
   spreadsheet: any;        // スプレッドシートデータ (Fortune-Sheet形式) // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -58,4 +62,14 @@ export interface ProjectFormData {
 export interface DocumentFormData {
   name: string;
   projectId: string;
+  type: DocumentType;
+}
+
+// 設計書タイプ情報
+export interface DocumentTypeInfo {
+  type: DocumentType;
+  label: string;
+  description: string;
+  icon: string;
+  defaultTabs: string[];
 }

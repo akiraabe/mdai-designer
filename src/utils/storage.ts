@@ -1,7 +1,7 @@
 // ローカルストレージ操作ユーティリティ
 // プロジェクト階層管理システムのデータ永続化
 
-import type { Project, Document, AppState } from '../types';
+import type { Project, Document, DocumentType, AppState } from '../types';
 import { STORAGE_KEYS } from '../types';
 
 /**
@@ -83,6 +83,7 @@ export function createProject(name: string, description?: string): Project {
 export function createDocument(
   name: string,
   projectId: string,
+  type: DocumentType = 'screen',
   conditions = '',
   supplement = '',
   spreadsheet = null,
@@ -93,6 +94,7 @@ export function createDocument(
     id: generateUUID(),
     projectId,
     name,
+    type,
     conditions,
     supplement,
     spreadsheet,
