@@ -21,9 +21,11 @@ import { useDocumentState } from '../../hooks/useDocumentState';
 import { DocumentHeader } from '../Header/DocumentHeader';
 import { ActionButtons } from '../Header/ActionButtons';
 import { TabNavigation } from '../Navigation/TabNavigation';
+import { shouldShowTab, getDocumentTypeInfo } from '../../utils/documentTypes';
 import { ConditionsSection } from '../Content/ConditionsSection';
 import { MockupSection } from '../Content/MockupSection';
 import { DefinitionsSection } from '../Content/DefinitionsSection';
+import { ModelsSection } from '../Content/ModelsSection';
 import { SupplementSection } from '../Content/SupplementSection';
 
 interface DocumentEditViewProps {
@@ -34,6 +36,8 @@ interface DocumentEditViewProps {
     supplement?: string;
     spreadsheet?: any;
     mockup?: string | null;
+    domainModels?: any[];
+    modelRelationships?: any[];
   }) => void;
   onGoBack: () => void;
 }
@@ -56,10 +60,14 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     supplementMarkdown,
     spreadsheetData,
     mockupImage,
+    domainModels,
+    modelRelationships,
     setConditionsMarkdown,
     setSupplementMarkdown,
     setSpreadsheetData,
     setMockupImage,
+    setDomainModels,
+    setModelRelationships,
   } = useDocumentState();
 
   // 初期データの設定
@@ -68,7 +76,9 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     setSupplementMarkdown(document.supplement || '');
     setSpreadsheetData(document.spreadsheet || []);
     setMockupImage(document.mockup || null);
-  }, [document, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage]);
+    setDomainModels(document.domainModels || []);
+    setModelRelationships(document.modelRelationships || []);
+  }, [document, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setDomainModels, setModelRelationships]);
 
   // データ変更時の自動保存
   useEffect(() => {
@@ -77,14 +87,16 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
         conditions: conditionsMarkdown,
         supplement: supplementMarkdown,
         spreadsheet: spreadsheetData,
-        mockup: mockupImage
+        mockup: mockupImage,
+        domainModels: domainModels,
+        modelRelationships: modelRelationships
       });
     };
 
     // 初期ロード以外で保存
     const timer = setTimeout(saveData, 1000);
     return () => clearTimeout(timer);
-  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, document.id, onUpdateDocument]);
+  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, domainModels, modelRelationships, document.id, onUpdateDocument]);
 
   // ファイル操作フック
   const {
@@ -127,7 +139,21 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
                 戻る
               </button>
               <div className="text-sm text-gray-500 mr-4">
-                {project.name} &gt; {document.name}
+                {project.name} &gt; 
+                <span style={{ marginLeft: '4px', marginRight: '4px' }}>
+                  {getDocumentTypeInfo(document.type || 'screen').icon}
+                </span>
+                {document.name}
+                <span style={{ 
+                  marginLeft: '8px', 
+                  padding: '2px 6px',
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  color: '#6b7280'
+                }}>
+                  {getDocumentTypeInfo(document.type || 'screen').label}
+                </span>
               </div>
             </div>
 
@@ -155,6 +181,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
         <TabNavigation
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          documentType={document.type || 'screen'}
         />
 
         {/* メインコンテンツ */}
@@ -162,27 +189,43 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
           {/* 全体表示 */}
           {activeTab === 'all' && (
             <div className="space-y-8">
-              <ConditionsSection
-                conditionsMarkdown={conditionsMarkdown}
-                onConditionsChange={setConditionsMarkdown}
-              />
-              <MockupSection
-                mockupImage={mockupImage}
-                onImageUpload={handleImageUpload}
-              />
-              <DefinitionsSection
-                spreadsheetData={spreadsheetData}
-                onSpreadsheetChange={setSpreadsheetData}
-              />
-              <SupplementSection
-                supplementMarkdown={supplementMarkdown}
-                onSupplementChange={setSupplementMarkdown}
-              />
+              {shouldShowTab(document.type || 'screen', 'conditions') && (
+                <ConditionsSection
+                  conditionsMarkdown={conditionsMarkdown}
+                  onConditionsChange={setConditionsMarkdown}
+                />
+              )}
+              {shouldShowTab(document.type || 'screen', 'mockup') && (
+                <MockupSection
+                  mockupImage={mockupImage}
+                  onImageUpload={handleImageUpload}
+                />
+              )}
+              {shouldShowTab(document.type || 'screen', 'definitions') && (
+                <DefinitionsSection
+                  spreadsheetData={spreadsheetData}
+                  onSpreadsheetChange={setSpreadsheetData}
+                />
+              )}
+              {shouldShowTab(document.type || 'screen', 'models') && (
+                <ModelsSection
+                  domainModels={domainModels}
+                  modelRelationships={modelRelationships}
+                  onModelsUpdate={setDomainModels}
+                  onRelationshipsUpdate={setModelRelationships}
+                />
+              )}
+              {shouldShowTab(document.type || 'screen', 'supplement') && (
+                <SupplementSection
+                  supplementMarkdown={supplementMarkdown}
+                  onSupplementChange={setSupplementMarkdown}
+                />
+              )}
             </div>
           )}
 
           {/* 表示条件タブ */}
-          {activeTab === 'conditions' && (
+          {activeTab === 'conditions' && shouldShowTab(document.type || 'screen', 'conditions') && (
             <ConditionsSection
               conditionsMarkdown={conditionsMarkdown}
               onConditionsChange={setConditionsMarkdown}
@@ -190,7 +233,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
           )}
 
           {/* 画面イメージタブ */}
-          {activeTab === 'mockup' && (
+          {activeTab === 'mockup' && shouldShowTab(document.type || 'screen', 'mockup') && (
             <MockupSection
               mockupImage={mockupImage}
               onImageUpload={handleImageUpload}
@@ -198,15 +241,25 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
           )}
 
           {/* 項目定義タブ */}
-          {activeTab === 'definitions' && (
+          {activeTab === 'definitions' && shouldShowTab(document.type || 'screen', 'definitions') && (
             <DefinitionsSection
               spreadsheetData={spreadsheetData}
               onSpreadsheetChange={setSpreadsheetData}
             />
           )}
 
+          {/* データモデルタブ */}
+          {activeTab === 'models' && shouldShowTab(document.type || 'screen', 'models') && (
+            <ModelsSection
+              domainModels={domainModels}
+              modelRelationships={modelRelationships}
+              onModelsUpdate={setDomainModels}
+              onRelationshipsUpdate={setModelRelationships}
+            />
+          )}
+
           {/* 補足説明タブ */}
-          {activeTab === 'supplement' && (
+          {activeTab === 'supplement' && shouldShowTab(document.type || 'screen', 'supplement') && (
             <SupplementSection
               supplementMarkdown={supplementMarkdown}
               onSupplementChange={setSupplementMarkdown}

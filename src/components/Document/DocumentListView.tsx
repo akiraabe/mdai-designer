@@ -3,12 +3,14 @@
 
 import React, { useState } from 'react';
 import { Plus, FileText, Calendar, ArrowLeft, MoreVertical, Edit2, Trash2, FolderOpen } from 'lucide-react';
-import type { Document, Project } from '../../types';
+import type { Document, Project, DocumentType } from '../../types';
+import { DocumentTypeSelector } from './DocumentTypeSelector';
+import { getDocumentTypeInfo } from '../../utils/documentTypes';
 
 interface DocumentListViewProps {
   project: Project;
   documents: Document[];
-  onCreateDocument: (name: string, projectId: string) => void;
+  onCreateDocument: (name: string, projectId: string, type?: DocumentType) => void;
   onSelectDocument: (documentId: string) => void;
   onUpdateDocument: (documentId: string, updates: { name?: string }) => void;
   onDeleteDocument: (documentId: string) => void;
@@ -27,13 +29,15 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingDocument, setEditingDocument] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '' });
+  const [selectedType, setSelectedType] = useState<DocumentType>('screen');
 
   // 新規作成フォーム送信
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.name.trim()) {
-      onCreateDocument(formData.name.trim(), project.id);
+      onCreateDocument(formData.name.trim(), project.id, selectedType);
       setFormData({ name: '' });
+      setSelectedType('screen');
       setShowCreateForm(false);
     }
   };
@@ -110,6 +114,12 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
         <div className="bg-white border-2 border-green-200 rounded-lg p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">新規設計書作成</h3>
           <form onSubmit={handleCreateSubmit}>
+            {/* 設計書タイプ選択 */}
+            <DocumentTypeSelector
+              selectedType={selectedType}
+              onChange={setSelectedType}
+            />
+            
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 設計書名 *
@@ -119,7 +129,7 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="例: ユーザー管理画面設計書"
+                placeholder={`例: ${getDocumentTypeInfo(selectedType).label}`}
                 required
               />
             </div>
@@ -205,10 +215,21 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center">
-                        <FileText className="w-8 h-8 text-green-600 mr-3" />
-                        <h3 className="text-lg font-semibold text-gray-900 truncate">
-                          {document.name}
-                        </h3>
+                        <span style={{ fontSize: '24px', marginRight: '12px' }}>
+                          {getDocumentTypeInfo(document.type || 'screen').icon}
+                        </span>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 truncate">
+                            {document.name}
+                          </h3>
+                          <div style={{ 
+                            fontSize: '12px', 
+                            color: '#6b7280',
+                            marginTop: '2px'
+                          }}>
+                            {getDocumentTypeInfo(document.type || 'screen').label}
+                          </div>
+                        </div>
                       </div>
                       <div className="relative">
                         <button

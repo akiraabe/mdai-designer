@@ -4,6 +4,7 @@ import {
   initialSupplementMarkdown, 
   initialSpreadsheetData 
 } from './useInitialData';
+import type { DomainModel, ModelRelationship } from '../types/domainModel';
 
 export const useDocumentState = () => {
   // Markdownとスプレッドシートの状態
@@ -13,6 +14,10 @@ export const useDocumentState = () => {
   
   // 画像状態
   const [mockupImage, setMockupImage] = useState<string | null>(null);
+  
+  // データモデル状態
+  const [domainModels, setDomainModels] = useState<DomainModel[]>([]);
+  const [modelRelationships, setModelRelationships] = useState<ModelRelationship[]>([]);
 
   // 元のセッター関数をそのまま使用（無限ループ防止）
 
@@ -22,11 +27,15 @@ export const useDocumentState = () => {
     supplementMarkdown,
     spreadsheetData,
     mockupImage,
+    domainModels,
+    modelRelationships,
     
     // セッター
     setConditionsMarkdown,
     setSupplementMarkdown,
     setSpreadsheetData,
     setMockupImage,
+    setDomainModels,
+    setModelRelationships,
   };
 };
