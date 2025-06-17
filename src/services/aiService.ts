@@ -301,7 +301,9 @@ class AIService {
    */
   private parseAIResponse(response: string, originalPrompt: string): GeneratedDraft {
     console.log('🔍 AI応答パース開始');
-    console.log('📄 AI応答:', response.substring(0, 500) + '...');
+    console.log('📏 応答長:', response.length, '文字');
+    console.log('📄 AI応答 (先頭500文字):', response.substring(0, 500) + '...');
+    console.log('📄 AI応答 (末尾200文字):', '...' + response.substring(response.length - 200));
     
     try {
       // JSONブロック検索のデバッグ
@@ -311,14 +313,27 @@ class AIService {
       const jsonMatch1 = response.match(/```json\s*([\s\S]*?)\s*```/);
       console.log('📝 パターン1 (```json):', jsonMatch1 ? 'マッチ' : 'なし');
       
-      // パターン2: 柔軟な ``` { ... } ```
+      // パターン2: 柔軟な ``` { ... } ```  
       const jsonMatch2 = response.match(/```\s*([\s\S]*?)\s*```/);
       console.log('📝 パターン2 (``` block):', jsonMatch2 ? 'マッチ' : 'なし');
       
-      if (jsonMatch2) {
-        console.log('🔍 ブロック内容:', jsonMatch2[1].substring(0, 200) + '...');
+      // パターン3: 開始のみ検索（終了タグがない場合）
+      const jsonMatch3 = response.match(/```json\s*([\s\S]*)/);
+      console.log('📝 パターン3 (```json 開始のみ):', jsonMatch3 ? 'マッチ' : 'なし');
+      
+      // 優先順位でマッチしたパターンを処理
+      const matchedPattern = jsonMatch1 || jsonMatch2 || jsonMatch3;
+      if (matchedPattern) {
+        console.log('🔍 マッチしたパターンで処理開始');
+        console.log('🔍 ブロック内容:', matchedPattern[1].substring(0, 200) + '...');
         try {
-          const cleanJson = jsonMatch2[1].trim();
+          let cleanJson = matchedPattern[1].trim();
+          
+          // 末尾の ``` を除去（もしあれば）
+          if (cleanJson.endsWith('```')) {
+            cleanJson = cleanJson.substring(0, cleanJson.length - 3).trim();
+          }
+          
           console.log('🧹 クリーン後:', cleanJson.substring(0, 200) + '...');
           const jsonData = JSON.parse(cleanJson);
           console.log('✅ JSONパース成功');
@@ -326,61 +341,70 @@ class AIService {
           
           if (jsonData.type === 'mixed') {
             console.log('🎯 混合タイプとして処理');
+            console.log('📊 スプレッドシートデータ:', jsonData.spreadsheetData?.length || 0, '件');
+            console.log('📝 表示条件:', jsonData.conditions?.length || 0, '文字');
+            console.log('📖 補足説明:', jsonData.supplement?.length || 0, '文字');
             return {
               type: 'mixed',
               spreadsheetData: jsonData.spreadsheetData,
               conditions: jsonData.conditions,
               supplement: jsonData.supplement
             };
+          } else if (jsonData.type === 'spreadsheet') {
+            console.log('📋 スプレッドシートタイプとして処理');
+            return {
+              type: 'spreadsheet',
+              spreadsheetData: jsonData.data || jsonData.spreadsheetData
+            };
+          } else if (jsonData.type === 'conditions') {
+            console.log('📝 表示条件タイプとして処理');
+            return {
+              type: 'conditions',
+              conditions: jsonData.content || jsonData.conditions
+            };
+          } else if (jsonData.type === 'supplement') {
+            console.log('📖 補足説明タイプとして処理');
+            return {
+              type: 'supplement',
+              supplement: jsonData.content || jsonData.supplement
+            };
           }
         } catch (parseError) {
           console.error('❌ JSONパースエラー:', parseError);
+          console.log('📝 パースエラー詳細:', parseError.message);
+          
+          // エラー位置周辺を表示
+          if (parseError.message.includes('position')) {
+            const position = parseInt(parseError.message.match(/position (\d+)/)?.[1] || '0');
+            const start = Math.max(0, position - 50);
+            const end = Math.min(cleanJson.length, position + 50);
+            console.log('🔍 エラー位置周辺:', cleanJson.substring(start, end));
+            console.log('👆 エラー位置:', ' '.repeat(Math.min(50, position - start)) + '^');
+          }
+          
+          // JSONの修復を試行
+          console.log('🔧 JSON修復を試行中...');
+          const repairedJson = this.repairJSON(cleanJson);
+          if (repairedJson) {
+            try {
+              const jsonData = JSON.parse(repairedJson);
+              console.log('✅ JSON修復成功！');
+              if (jsonData.type === 'mixed') {
+                return {
+                  type: 'mixed',
+                  spreadsheetData: jsonData.spreadsheetData,
+                  conditions: jsonData.conditions,
+                  supplement: jsonData.supplement
+                };
+              }
+            } catch (repairError) {
+              console.error('❌ 修復も失敗:', repairError);
+            }
+          }
         }
       }
       
-      // 元のロジック
-      const jsonMatch = jsonMatch1;
-      if (jsonMatch) {
-        console.log('✅ JSONブロック発見');
-        const jsonData = JSON.parse(jsonMatch[1]);
-        console.log('📊 パースされたJSONデータ:', jsonData);
-        console.log('🏷️ データタイプ:', jsonData.type);
-        
-        if (jsonData.type === 'spreadsheet') {
-          console.log('📋 スプレッドシートタイプとして処理');
-          return {
-            type: 'spreadsheet',
-            spreadsheetData: jsonData.data
-          };
-        } else if (jsonData.type === 'conditions') {
-          console.log('📝 表示条件タイプとして処理');
-          return {
-            type: 'conditions',
-            conditions: jsonData.content
-          };
-        } else if (jsonData.type === 'supplement') {
-          console.log('📖 補足説明タイプとして処理');
-          return {
-            type: 'supplement',
-            supplement: jsonData.content
-          };
-        } else if (jsonData.type === 'mixed') {
-          console.log('🎯 混合タイプとして処理');
-          console.log('📊 スプレッドシートデータ:', jsonData.spreadsheetData?.length || 0, '件');
-          console.log('📝 表示条件:', jsonData.conditions?.length || 0, '文字');
-          console.log('📖 補足説明:', jsonData.supplement?.length || 0, '文字');
-          return {
-            type: 'mixed',
-            spreadsheetData: jsonData.spreadsheetData,
-            conditions: jsonData.conditions,
-            supplement: jsonData.supplement
-          };
-        } else {
-          console.warn('⚠️ 未知のタイプ:', jsonData.type);
-        }
-      } else {
-        console.log('❌ JSONブロックが見つかりません');
-      }
+      console.log('❌ すべてのパターンでJSONブロックが見つかりません');
       
       // フォールバック: テキスト解析
       console.log('🔄 テキスト解析フォールバックに移行');
@@ -421,6 +445,63 @@ class AIService {
       type: 'conditions', 
       conditions: `# AI生成コンテンツ\n\n${response}`
     };
+  }
+
+  /**
+   * 破損したJSONの修復を試行
+   */
+  private repairJSON(brokenJson: string): string | null {
+    try {
+      console.log('🔧 JSON修復ステップ1: 末尾の不完全な部分を除去');
+      
+      // 最後の完全な "}" を探す
+      let lastCompleteEnd = -1;
+      let braceCount = 0;
+      let inString = false;
+      let escapeNext = false;
+      
+      for (let i = 0; i < brokenJson.length; i++) {
+        const char = brokenJson[i];
+        
+        if (escapeNext) {
+          escapeNext = false;
+          continue;
+        }
+        
+        if (char === '\\') {
+          escapeNext = true;
+          continue;
+        }
+        
+        if (char === '"' && !escapeNext) {
+          inString = !inString;
+          continue;
+        }
+        
+        if (!inString) {
+          if (char === '{') {
+            braceCount++;
+          } else if (char === '}') {
+            braceCount--;
+            if (braceCount === 0) {
+              lastCompleteEnd = i;
+            }
+          }
+        }
+      }
+      
+      if (lastCompleteEnd > 0) {
+        const repairedJson = brokenJson.substring(0, lastCompleteEnd + 1);
+        console.log('🔧 修復後のJSON長:', repairedJson.length, '文字');
+        console.log('🔧 修復後末尾:', repairedJson.substring(repairedJson.length - 100));
+        return repairedJson;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('🔧 JSON修復エラー:', error);
+      return null;
+    }
   }
 
   /**
