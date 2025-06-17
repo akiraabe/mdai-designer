@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.830.0",
+    "@aws-sdk/credential-providers": "^3.830.0",
     "@copilotkit/react-core": "^1.9.0",
     "@copilotkit/react-ui": "^1.9.0",
     "@fortune-sheet/react": "^1.0.2",
