@@ -36,6 +36,9 @@ npm run dev
 - **チャットアシスタント**: CopilotKit統合によるAI支援
 - **双方向連携**: WebUIデータの読み取り・書き込み機能
 
+#### チャットアシスタントAIにドラフトを作ってもらう様子
+![ai_generate_draft](./fixture/ai_generate_draft.gif)
+
 ## 使用方法
 
 ### 初回利用

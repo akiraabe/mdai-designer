@@ -235,8 +235,8 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
             cursor: 'pointer',
             transition: 'all 0.2s ease'
           }}
-          onMouseEnter={(e) => e.target.style.backgroundColor = '#1d4ed8'}
-          onMouseLeave={(e) => e.target.style.backgroundColor = '#2563eb'}
+          onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#1d4ed8'}
+          onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2563eb'}
         >
           <MessageCircle size={24} color="white" strokeWidth={2} />
         </button>
@@ -251,6 +251,8 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
             spreadsheetData={spreadsheetData}
             mockupImage={mockupImage}
             onConditionsMarkdownUpdate={setConditionsMarkdown}
+            onSupplementMarkdownUpdate={setSupplementMarkdown}
+            onSpreadsheetDataUpdate={setSpreadsheetData}
           />
         )}
       </div>

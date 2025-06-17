@@ -1,6 +1,8 @@
 // src/components/Common/ChatPanel.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
+import { generateDesignDraft, generateChatResponse, checkAPIKey } from '../../services/aiService';
+import type { WebUIData, GeneratedDraft } from '../../types/aiTypes';
 
 interface ChatMessage {
   id: string;
@@ -17,8 +19,10 @@ interface ChatPanelProps {
   supplementMarkdown: string;
   spreadsheetData: any[];
   mockupImage: string | null;
-  // マークダウン更新機能
+  // データ更新機能
   onConditionsMarkdownUpdate: (markdown: string) => void;
+  onSupplementMarkdownUpdate: (markdown: string) => void;
+  onSpreadsheetDataUpdate: (data: any[]) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -28,28 +32,115 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   supplementMarkdown, 
   spreadsheetData, 
   mockupImage,
-  onConditionsMarkdownUpdate
+  onConditionsMarkdownUpdate,
+  onSupplementMarkdownUpdate,
+  onSpreadsheetDataUpdate
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      content: 'こんにちは！設計書作成のお手伝いをします。何かご質問はありますか？',
+      content: 'こんにちは！AI設計アシスタントです。設計書の生成や質問にお答えします！✨',
       isUser: false,
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // APIキーの存在確認
+  const hasAPIKey = checkAPIKey();
   
   // 定型質問ボタンの定義
   const suggestedQuestions = [
     '現在のデータは？',
-    'スプレッドシートの中身',
-    '表示条件を教えて',
+    'ECサイトの商品一覧画面を作って',
+    '管理画面のユーザー項目を生成',
+    'ログイン画面の表示条件を作成',
     '/status',
     '/help',
     '/write'
   ];
+
+  // AIで生成されたデータをWebUIに反映
+  const applyGeneratedDraft = (draft: GeneratedDraft): string => {
+    try {
+      let result = '✅ **AI生成コンテンツをWebUIに反映しました！**\n\n';
+      
+      if (draft.type === 'spreadsheet' && draft.spreadsheetData) {
+        // スプレッドシートデータの構造を確認・変換
+        const cellData = draft.spreadsheetData.map(cell => ({
+          r: cell.r,
+          c: cell.c,
+          v: { v: cell.v, ct: { t: 'inlineStr' } }
+        }));
+        
+        const sheetData = [{
+          name: 'AI生成シート',
+          celldata: cellData,
+          row: Math.max(...cellData.map(c => c.r)) + 1,
+          column: Math.max(...cellData.map(c => c.c)) + 1
+        }];
+        
+        onSpreadsheetDataUpdate(sheetData);
+        result += '📊 **スプレッドシート**: 項目定義データを生成\n';
+        result += `- ${cellData.length}個のセルを生成\n`;
+        result += '- 「項目定義」タブで確認してください\n\n';
+      }
+      
+      if (draft.type === 'conditions' && draft.conditions) {
+        onConditionsMarkdownUpdate(draft.conditions);
+        result += '📝 **表示条件**: Markdownコンテンツを生成\n';
+        result += '- 「表示条件」タブで確認してください\n\n';
+      }
+      
+      if (draft.type === 'supplement' && draft.supplement) {
+        onSupplementMarkdownUpdate(draft.supplement);
+        result += '📋 **補足説明**: Markdownコンテンツを生成\n';
+        result += '- 「補足説明」セクションで確認してください\n\n';
+      }
+      
+      if (draft.type === 'mixed') {
+        // 複数データタイプの場合
+        if (draft.spreadsheetData) {
+          const cellData = draft.spreadsheetData.map(cell => ({
+            r: cell.r,
+            c: cell.c,
+            v: { v: cell.v, ct: { t: 'inlineStr' } }
+          }));
+          
+          const sheetData = [{
+            name: 'AI生成シート',
+            celldata: cellData,
+            row: Math.max(...cellData.map(c => c.r)) + 1,
+            column: Math.max(...cellData.map(c => c.c)) + 1
+          }];
+          
+          onSpreadsheetDataUpdate(sheetData);
+          result += '📊 **スプレッドシート**: 項目定義データ\n';
+        }
+        
+        if (draft.conditions) {
+          onConditionsMarkdownUpdate(draft.conditions);
+          result += '📝 **表示条件**: Markdownコンテンツ\n';
+        }
+        
+        if (draft.supplement) {
+          onSupplementMarkdownUpdate(draft.supplement);
+          result += '📋 **補足説明**: Markdownコンテンツ\n';
+        }
+        
+        result += '\n各タブで生成されたコンテンツを確認してください。\n\n';
+      }
+      
+      result += '🎉 生成が完了しました！さらに修正や追加が必要でしたらお知らせください。';
+      return result;
+      
+    } catch (error) {
+      console.error('データ反映エラー:', error);
+      return '❌ データの反映中にエラーが発生しました。生成されたデータの形式を確認してください。';
+    }
+  };
 
   // マークダウンにチャット履歴を書き込む機能
   const writeToMarkdown = () => {
@@ -107,6 +198,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   }, [messages]);
 
+  // 設計書生成要求の判定
+  const isDesignGenerationRequest = (message: string): boolean => {
+    const lowerMessage = message.toLowerCase();
+    const keywords = [
+      '作って', '生成', '作成', '画面', 'サイト', '項目', '定義', 
+      'ログイン', '管理', '一覧', 'crud', 'フォーム', 'ec', 'ランディング'
+    ];
+    return keywords.some(keyword => lowerMessage.includes(keyword));
+  };
+
   // 現在のページデータを解析する関数
   const analyzeCurrentData = () => {
     // スプレッドシートからセル数とサンプルデータを取得
@@ -142,8 +243,43 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     };
   };
 
-  // ダミー応答機能
-  const getDummyResponse = (userMessage: string): string => {
+  // AI統合応答機能
+  const getAIResponse = async (userMessage: string): Promise<string> => {
+    // APIキーが設定されていない場合のフォールバック
+    if (!hasAPIKey) {
+      return getFallbackResponse(userMessage);
+    }
+    
+    const currentData: WebUIData = {
+      conditionsMarkdown,
+      supplementMarkdown, 
+      spreadsheetData,
+      mockupImage
+    };
+    
+    try {
+      // 設計書生成要求の場合
+      if (isDesignGenerationRequest(userMessage)) {
+        const draft = await generateDesignDraft({
+          prompt: userMessage,
+          context: currentData
+        });
+        
+        const result = applyGeneratedDraft(draft);
+        return result;
+      }
+      
+      // 一般的なチャット応答
+      return await generateChatResponse(userMessage, currentData);
+      
+    } catch (error) {
+      console.error('AI応答エラー:', error);
+      return `❌ AI応答の生成に失敗しました。\n\n**エラー**: ${error instanceof Error ? error.message : '不明なエラー'}\n\n**対処法**:\n- インターネット接続を確認\n- APIキーが正しく設定されているか確認\n- しばらく時間をおいて再試行`;
+    }
+  };
+
+  // フォールバック応答（APIキー未設定時）
+  const getFallbackResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
     const currentData = analyzeCurrentData();
     
@@ -350,8 +486,26 @@ ${tableData}
       return '問題が発生している場合は以下をお試しください：\n\n1. ページをリロードしてみてください\n2. ブラウザのキャッシュをクリアしてください\n3. 読み込みが失敗した場合は、テストデータを読み込んでから再試行してください';
     }
     
+    // APIキー未設定の場合の案内
+    if (isDesignGenerationRequest(userMessage)) {
+      return `🔑 **AIによる設計書生成機能を利用するには**
+
+OpenAI APIキーの設定が必要です：
+
+1. OpenAI APIキーを取得
+2. \`.env.local\` ファイルに以下を設定：
+   \`\`\`
+   VITE_OPENAI_API_KEY=your_api_key_here
+   \`\`\`
+3. 開発サーバーを再起動
+
+設定後、AI生成機能が利用可能になります！`;
+    }
+    
     // デフォルト応答
-    return `「${userMessage}」について承知いたしました。設計書作成に関するご質問でしたら、具体的にお聞かせください。
+    return `「${userMessage}」について承知いたしました。
+
+**AI機能**: OpenAI APIキーを設定すると、AIによる設計書生成が利用できます。
 
 よくある質問：
 • 使い方やヘルプについて
@@ -360,65 +514,133 @@ ${tableData}
 • エラーや問題の解決方法について`;
   };
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const messageText = inputMessage;
+    setInputMessage('');
+    setIsLoading(true);
 
     // ユーザーメッセージを追加
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      content: inputMessage,
+      content: messageText,
       isUser: true,
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
 
-    // ダミー応答を生成（少し遅延させて自然さを演出）
-    setTimeout(() => {
-      const botResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: getDummyResponse(inputMessage),
-        isUser: false,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botResponse]);
-    }, 500);
+    // ローディングメッセージを追加
+    const loadingMessage: ChatMessage = {
+      id: 'loading',
+      content: hasAPIKey ? '🤖 AI生成中...' : '🤖 処理中...',
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, loadingMessage]);
 
-    setInputMessage('');
+    try {
+      // AI応答を取得
+      const responseContent = await getAIResponse(messageText);
+      
+      // ローディングメッセージを削除し、実際の応答を追加
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== 'loading');
+        return [...filtered, {
+          id: (Date.now() + 1).toString(),
+          content: responseContent,
+          isUser: false,
+          timestamp: new Date()
+        }];
+      });
+      
+    } catch (error) {
+      // エラーの場合もローディングメッセージを削除
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== 'loading');
+        return [...filtered, {
+          id: (Date.now() + 1).toString(),
+          content: `❌ エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+          isUser: false,
+          timestamp: new Date()
+        }];
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 質問ボタンクリック時の処理
-  const handleQuestionClick = (question: string) => {
-    setInputMessage(question);
-    // 少し遅延してから自動送信
-    setTimeout(() => {
-      if (question.trim()) {
-        const userMessage: ChatMessage = {
-          id: Date.now().toString(),
-          content: question,
-          isUser: true,
+  const handleQuestionClick = async (question: string) => {
+    if (isLoading) return;
+    
+    setInputMessage('');
+    setIsLoading(true);
+
+    // ユーザーメッセージを追加
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      content: question,
+      isUser: true,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMessage]);
+
+    // ローディングメッセージを追加
+    const loadingMessage: ChatMessage = {
+      id: 'loading',
+      content: hasAPIKey ? '🤖 AI生成中...' : '🤖 処理中...',
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, loadingMessage]);
+
+    try {
+      // AI応答を取得
+      const responseContent = await getAIResponse(question);
+      
+      // ローディングメッセージを削除し、実際の応答を追加
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== 'loading');
+        return [...filtered, {
+          id: (Date.now() + 1).toString(),
+          content: responseContent,
+          isUser: false,
           timestamp: new Date()
-        };
-        setMessages(prev => [...prev, userMessage]);
-
-        setTimeout(() => {
-          const botResponse: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            content: getDummyResponse(question),
-            isUser: false,
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, botResponse]);
-        }, 500);
-
-        setInputMessage('');
-      }
-    }, 100);
+        }];
+      });
+      
+    } catch (error) {
+      setMessages(prev => {
+        const filtered = prev.filter(msg => msg.id !== 'loading');
+        return [...filtered, {
+          id: (Date.now() + 1).toString(),
+          content: `❌ エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+          isUser: false,
+          timestamp: new Date()
+        }];
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div 
-      style={{
+    <>
+      {/* CSS アニメーション */}
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      <div 
+        style={{
         position: 'fixed',
         bottom: '80px', // ボタンの上に配置
         right: '20px',
@@ -448,10 +670,26 @@ ${tableData}
         borderRadius: '12px 12px 0 0'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageCircle className="h-4 w-4 text-blue-600" />
+          {hasAPIKey ? (
+            <Sparkles className="h-4 w-4 text-purple-600" />
+          ) : (
+            <MessageCircle className="h-4 w-4 text-blue-600" />
+          )}
           <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-            設計アシスタント
+            {hasAPIKey ? 'AI設計アシスタント' : '設計アシスタント'}
           </h3>
+          {hasAPIKey && (
+            <span style={{ 
+              fontSize: '10px', 
+              backgroundColor: '#dcfce7', 
+              color: '#166534', 
+              padding: '2px 6px', 
+              borderRadius: '4px',
+              fontWeight: '500'
+            }}>
+              AI
+            </span>
+          )}
         </div>
         <button
           onClick={onClose}
@@ -596,14 +834,14 @@ ${tableData}
           />
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim()}
+            disabled={!inputMessage.trim() || isLoading}
             style={{
-              backgroundColor: inputMessage.trim() ? '#3b82f6' : '#d1d5db',
+              backgroundColor: (inputMessage.trim() && !isLoading) ? '#3b82f6' : '#d1d5db',
               color: '#ffffff',
               padding: '16px',
               borderRadius: '12px',
               border: 'none',
-              cursor: inputMessage.trim() ? 'pointer' : 'not-allowed',
+              cursor: (inputMessage.trim() && !isLoading) ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s ease',
               width: '60px',
               height: '60px',
@@ -613,10 +851,22 @@ ${tableData}
               fontWeight: 'bold'
             }}
           >
-            <Send className="h-5 w-5" />
+            {isLoading ? (
+              <div style={{
+                width: '20px',
+                height: '20px',
+                border: '2px solid #ffffff',
+                borderTop: '2px solid transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
     </div>
+    </>
   );
 };
