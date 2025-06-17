@@ -9,13 +9,53 @@ const openai = new OpenAI({
 });
 
 /**
+ * WebUIが空白かどうかを判定
+ */
+const isWebUIBlank = (context: WebUIData): boolean => {
+  const conditionsEmpty = !context.conditionsMarkdown || context.conditionsMarkdown.trim().length === 0;
+  const supplementEmpty = !context.supplementMarkdown || context.supplementMarkdown.trim().length === 0;
+  const spreadsheetEmpty = !context.spreadsheetData || context.spreadsheetData.length === 0 || 
+    !context.spreadsheetData[0]?.celldata || context.spreadsheetData[0].celldata.length === 0;
+  const mockupEmpty = !context.mockupImage;
+  
+  // 3つ以上が空の場合はブランクと判定
+  const emptyCount = [conditionsEmpty, supplementEmpty, spreadsheetEmpty, mockupEmpty].filter(Boolean).length;
+  return emptyCount >= 3;
+};
+
+/**
+ * ユーザー指示からターゲットタイプを推定
+ */
+const inferTargetType = (prompt: string): string => {
+  const lowerPrompt = prompt.toLowerCase();
+  
+  if (lowerPrompt.includes('ec') || lowerPrompt.includes('商品') || lowerPrompt.includes('カート') || lowerPrompt.includes('注文')) {
+    return 'ecommerce';
+  } else if (lowerPrompt.includes('管理') || lowerPrompt.includes('admin') || lowerPrompt.includes('ユーザー管理')) {
+    return 'admin';
+  } else if (lowerPrompt.includes('ログイン') || lowerPrompt.includes('認証') || lowerPrompt.includes('login')) {
+    return 'auth';
+  } else if (lowerPrompt.includes('ランディング') || lowerPrompt.includes('lp') || lowerPrompt.includes('トップ')) {
+    return 'landing';
+  } else if (lowerPrompt.includes('ブログ') || lowerPrompt.includes('記事') || lowerPrompt.includes('cms')) {
+    return 'blog';
+  }
+  
+  return 'general';
+};
+
+/**
  * 設計書生成のメインファンクション
  */
 export const generateDesignDraft = async (request: DesignGenerationRequest): Promise<GeneratedDraft> => {
-  const { prompt, context, targetType = 'general' } = request;
+  const { prompt, context } = request;
   
-  // システムプロンプト生成
-  const systemPrompt = createSystemPrompt(context, targetType);
+  // ユーザー指示からターゲットタイプを推定
+  const targetType = request.targetType || inferTargetType(prompt);
+  
+  // WebUIがブランクの場合は統合ドラフト生成
+  const isBlank = isWebUIBlank(context);
+  const systemPrompt = createSystemPrompt(context, targetType, isBlank);
   
   try {
     const completion = await openai.chat.completions.create({
@@ -74,9 +114,54 @@ export const generateChatResponse = async (userMessage: string, context: WebUIDa
 };
 
 /**
+ * ブランクUI用の統合ドラフト生成プロンプト
+ */
+const createBlankUIPrompt = (_context: WebUIData, targetType: string): string => {
+  return `
+あなたは経験豊富な画面設計書作成の専門家です。
+現在WebUIは空白状態のため、ユーザーの指示に基づいて**完全な設計書ドラフト**を一括生成してください。
+
+生成対象: ${targetType}システム
+
+## 出力形式（必須）
+以下のJSON形式で、スプレッドシート・表示条件・補足説明をすべて含む統合ドラフトを生成してください：
+
+\`\`\`json
+{
+  "type": "mixed",
+  "spreadsheetData": [
+    {"r": 0, "c": 0, "v": "項目名"},
+    {"r": 0, "c": 1, "v": "型"},
+    {"r": 0, "c": 2, "v": "必須"},
+    {"r": 0, "c": 3, "v": "説明"},
+    {"r": 1, "c": 0, "v": "具体的項目名"},
+    {"r": 1, "c": 1, "v": "文字列"},
+    {"r": 1, "c": 2, "v": "○"},
+    {"r": 1, "c": 3, "v": "項目の詳細説明"}
+  ],
+  "conditions": "# 表示条件\\n\\n## 基本表示\\n- 具体的な表示ルール\\n- アクセス権限\\n- 画面遷移条件",
+  "supplement": "# 補足説明\\n\\n## 技術仕様\\n- 実装上の注意点\\n## セキュリティ\\n- 考慮事項"
+}
+\`\`\`
+
+## 生成要件
+1. **項目定義**: 実用的で業界標準に沿った項目を10-15個程度
+2. **表示条件**: 具体的な業務ルールと技術仕様
+3. **補足説明**: セキュリティ・パフォーマンス・保守性の観点
+
+実際の開発で使用できる高品質なドラフトを生成してください。
+`;
+};
+
+/**
  * システムプロンプト生成
  */
-const createSystemPrompt = (context: WebUIData, targetType: string): string => {
+const createSystemPrompt = (context: WebUIData, targetType: string, isBlankUI: boolean = false): string => {
+  
+  // ブランクUIの場合は統合ドラフト生成プロンプト
+  if (isBlankUI) {
+    return createBlankUIPrompt(context, targetType);
+  }
   return `
 あなたは経験豊富な画面設計書作成の専門家です。
 ユーザーの指示に従って具体的で実用的な設計書ドラフトを生成してください。
@@ -143,6 +228,13 @@ const parseAIResponse = (response: string, originalPrompt: string): GeneratedDra
         return {
           type: 'supplement',
           supplement: jsonData.content
+        };
+      } else if (jsonData.type === 'mixed') {
+        return {
+          type: 'mixed',
+          spreadsheetData: jsonData.spreadsheetData,
+          conditions: jsonData.conditions,
+          supplement: jsonData.supplement
         };
       }
     }
