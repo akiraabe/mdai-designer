@@ -2,7 +2,7 @@
 // プロジェクト階層管理システムの中核
 
 import { useState, useEffect, useCallback } from 'react';
-import type { AppState, AppMode, NavigationState } from '../types';
+import type { AppState, AppMode, NavigationState, DocumentType } from '../types';
 import { 
   loadAppState, 
   saveAppState,
@@ -59,8 +59,8 @@ export const useAppState = () => {
   }, [appState]);
 
   // 設計書作成
-  const handleCreateDocument = useCallback((name: string, projectId: string) => {
-    const newDocument = createDocument(name, projectId);
+  const handleCreateDocument = useCallback((name: string, projectId: string, type: DocumentType = 'screen') => {
+    const newDocument = createDocument(name, projectId, type);
     const newState = addDocument(appState, newDocument);
     setAppState(newState);
     setNavigationState({
@@ -68,7 +68,7 @@ export const useAppState = () => {
       currentProjectId: projectId,
       currentDocumentId: newDocument.id
     });
-    console.log('✅ 設計書作成完了:', newDocument.name);
+    console.log('✅ 設計書作成完了:', newDocument.name, 'タイプ:', type);
   }, [appState]);
 
   // プロジェクト選択
