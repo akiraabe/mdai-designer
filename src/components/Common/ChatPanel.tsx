@@ -1,14 +1,17 @@
 // src/components/Common/ChatPanel.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, CheckCircle, XCircle } from 'lucide-react';
 import { generateDesignDraft, generateChatResponse, checkAPIKey } from '../../services/aiService';
-import type { WebUIData, GeneratedDraft } from '../../types/aiTypes';
+import { ModificationService } from '../../services/modificationService';
+import type { WebUIData, GeneratedDraft, ModificationProposal } from '../../types/aiTypes';
 
 interface ChatMessage {
   id: string;
   content: string;
   isUser: boolean;
   timestamp: Date;
+  proposal?: ModificationProposal; // 修正提案データ
+  type?: 'normal' | 'proposal' | 'applied' | 'rejected'; // メッセージタイプ
 }
 
 interface ChatPanelProps {
@@ -23,6 +26,8 @@ interface ChatPanelProps {
   onConditionsMarkdownUpdate: (markdown: string) => void;
   onSupplementMarkdownUpdate: (markdown: string) => void;
   onSpreadsheetDataUpdate: (data: any[]) => void;
+  // バックアップ管理機能
+  onShowBackupManager?: () => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
@@ -34,14 +39,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   mockupImage,
   onConditionsMarkdownUpdate,
   onSupplementMarkdownUpdate,
-  onSpreadsheetDataUpdate
+  onSpreadsheetDataUpdate,
+  onShowBackupManager
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      content: 'こんにちは！AI設計アシスタントです。設計書の生成や質問にお答えします！✨',
+      content: 'こんにちは！AI設計アシスタントです。設計書の生成や質問にお答えします！✨\n\n🎯 **新機能**: 設計書の修正提案ができます！\n「〇〇を追加して」「△△を変更して」など、変更要求をお伝えください。',
       isUser: false,
-      timestamp: new Date()
+      timestamp: new Date(),
+      type: 'normal'
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
@@ -57,9 +64,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     'ECサイトの商品一覧画面を作って',
     '管理画面のユーザー項目を生成',
     'ログイン画面の表示条件を作成',
+    '認証項目を追加して',
+    'セキュリティ項目を強化して',
     '/status',
     '/help',
-    '/write'
+    '/write',
+    '/backup'
   ];
 
   // AIで生成されたデータをWebUIに反映
@@ -208,6 +218,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     return keywords.some(keyword => lowerMessage.includes(keyword));
   };
 
+  // 修正提案要求の判定
+  const isModificationRequest = (message: string): boolean => {
+    const lowerMessage = message.toLowerCase();
+    const modificationKeywords = [
+      '追加して', '変更して', '修正して', '削除して', '更新して',
+      '改善して', '強化して', '見直して', '調整して', 'に変えて',
+      'を加えて', 'を含めて', 'を外して', 'を消して'
+    ];
+    return modificationKeywords.some(keyword => lowerMessage.includes(keyword));
+  };
+
   // 現在のページデータを解析する関数
   const analyzeCurrentData = () => {
     // スプレッドシートからセル数とサンプルデータを取得
@@ -243,6 +264,69 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     };
   };
 
+  // 修正提案を処理する関数
+  const handleModificationProposal = async (proposal: ModificationProposal): Promise<void> => {
+    try {
+      const currentData: WebUIData = {
+        conditionsMarkdown,
+        supplementMarkdown,
+        spreadsheetData,
+        mockupImage
+      };
+
+      // 修正提案を適用
+      const result = ModificationService.applyModificationProposal(proposal, currentData);
+      
+      if (result.success && result.updatedData) {
+        // WebUIに反映
+        if (result.updatedData.conditionsMarkdown !== currentData.conditionsMarkdown) {
+          onConditionsMarkdownUpdate(result.updatedData.conditionsMarkdown);
+        }
+        if (result.updatedData.supplementMarkdown !== currentData.supplementMarkdown) {
+          onSupplementMarkdownUpdate(result.updatedData.supplementMarkdown);
+        }
+        if (JSON.stringify(result.updatedData.spreadsheetData) !== JSON.stringify(currentData.spreadsheetData)) {
+          onSpreadsheetDataUpdate(result.updatedData.spreadsheetData);
+        }
+
+        // 成功メッセージを追加
+        const successMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: `✅ **修正提案を適用しました！**\n\n📋 **変更概要**: ${proposal.summary}\n\n🎯 **適用された変更**:\n${proposal.changes.map(change => `- ${change.target}: ${change.action} - ${change.reason}`).join('\n')}\n\n各タブでハイライトされた変更箇所を確認してください。`,
+          isUser: false,
+          timestamp: new Date(),
+          type: 'applied'
+        };
+        
+        setMessages(prev => [...prev, successMessage]);
+        
+      } else {
+        // エラーメッセージを追加
+        const errorMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: `❌ **修正提案の適用に失敗しました**\n\n**エラー**:\n${result.errors.join('\n')}\n\nバックアップから手動で復元してください。`,
+          isUser: false,
+          timestamp: new Date(),
+          type: 'rejected'
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } catch (error) {
+      console.error('❌ 修正提案処理エラー:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content: `❌ **修正提案の処理中にエラーが発生しました**\n\n${error instanceof Error ? error.message : '不明なエラー'}`,
+        isUser: false,
+        timestamp: new Date(),
+        type: 'rejected'
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
+
   // AI統合応答機能
   const getAIResponse = async (userMessage: string): Promise<string> => {
     // APIキーが設定されていない場合のフォールバック
@@ -258,6 +342,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     };
     
     try {
+      // 修正提案要求の場合
+      if (isModificationRequest(userMessage)) {
+        const proposal = await ModificationService.generateModificationProposal(userMessage, currentData);
+        
+        // 修正提案をメッセージとして追加
+        const proposalMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          content: `🎯 **修正提案を生成しました**\n\n📋 **概要**: ${proposal.summary}\n\n🔧 **提案された変更**:\n${proposal.changes.map(change => 
+            `- **${change.target}** (${change.action}): ${change.reason} (信頼度: ${(change.confidence * 100).toFixed(0)}%)`
+          ).join('\n')}\n\n⚠️ **注意事項**:\n${proposal.risks.map(risk => `- ${risk}`).join('\n')}\n\n**この提案を適用しますか？**`,
+          isUser: false,
+          timestamp: new Date(),
+          type: 'proposal',
+          proposal
+        };
+        
+        setMessages(prev => [...prev, proposalMessage]);
+        
+        return '修正提案を確認してください。適用する場合は「適用」ボタンをクリックしてください。';
+      }
+      
       // 設計書生成要求の場合
       if (isDesignGenerationRequest(userMessage)) {
         const draft = await generateDesignDraft({
@@ -292,6 +397,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 • \`/status\` - 現在のデータ状況を表示
 • \`/data\` - スプレッドシートの詳細データを表示
 • \`/write\` - チャット履歴を表示条件に書き込み
+• \`/backup\` - バックアップ管理画面を開く
+
+**修正提案機能:**
+• 「〇〇を追加して」「△△を変更して」など、変更要求を送信
+• AIが安全な修正提案を生成し、適用前に確認可能
 
 **よくある質問:**
 • "現在のデータは？" - 全体の状況確認
@@ -350,6 +460,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     // /writeコマンドの処理
     if (userMessage.startsWith('/write')) {
       return writeToMarkdown();
+    }
+
+    // /backupコマンドの処理
+    if (userMessage.startsWith('/backup')) {
+      if (onShowBackupManager) {
+        onShowBackupManager();
+        return '🔄 **バックアップ管理画面を開きました**\n\nバックアップの作成・復元・削除が可能です。';
+      } else {
+        return '⚠️ **バックアップ管理機能は現在利用できません**\n\n管理機能の設定を確認してください。';
+      }
     }
     
     // 現在のデータに関する質問への対応
@@ -725,10 +845,69 @@ OpenAI APIキーの設定が必要です：
               className={`max-w-[80%] rounded-lg px-3 py-2 ${
                 message.isUser
                   ? 'bg-blue-600 text-white'
+                  : message.type === 'proposal'
+                  ? 'bg-amber-50 text-amber-900 border border-amber-200'
+                  : message.type === 'applied'
+                  ? 'bg-green-50 text-green-900 border border-green-200'
+                  : message.type === 'rejected'
+                  ? 'bg-red-50 text-red-900 border border-red-200'
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
               <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+              
+              {/* 修正提案の場合、適用・拒否ボタンを表示 */}
+              {message.type === 'proposal' && message.proposal && (
+                <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleModificationProposal(message.proposal!)}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <CheckCircle className="h-3 w-3" />
+                    適用
+                  </button>
+                  <button
+                    onClick={() => {
+                      // 拒否メッセージを追加
+                      const rejectMessage: ChatMessage = {
+                        id: Date.now().toString(),
+                        content: '❌ **修正提案を拒否しました**\n\n提案は適用されませんでした。',
+                        isUser: false,
+                        timestamp: new Date(),
+                        type: 'rejected'
+                      };
+                      setMessages(prev => [...prev, rejectMessage]);
+                    }}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <XCircle className="h-3 w-3" />
+                    拒否
+                  </button>
+                </div>
+              )}
+              
               <div
                 className={`text-xs mt-1 ${
                   message.isUser ? 'text-blue-100' : 'text-gray-500'

@@ -10,6 +10,7 @@ import { CopilotKit } from '@copilotkit/react-core';
 
 // Chat関連
 import { ChatPanel } from '../Common/ChatPanel';
+import { BackupManager } from '../Common/BackupManager';
 
 // カスタムフック
 import { useFileOperations } from '../../hooks/useFileOperations';
@@ -50,6 +51,9 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
 }) => {
   // チャットパネル状態
   const [isChatOpen, setIsChatOpen] = useState(false);
+  
+  // バックアップ管理状態
+  const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false);
   
   // タブナビゲーションフック
   const { activeTab, setActiveTab } = useTabNavigation();
@@ -121,6 +125,23 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     spreadsheetData,
     setSpreadsheetData,
   });
+
+  // バックアップ復元処理
+  const handleRestoreFromBackup = (backupData: {
+    conditionsMarkdown: string;
+    supplementMarkdown: string;
+    spreadsheetData: any[];
+    mockupImage: string | null;
+  }) => {
+    setConditionsMarkdown(backupData.conditionsMarkdown || '');
+    setSupplementMarkdown(backupData.supplementMarkdown || '');
+    setSpreadsheetData(backupData.spreadsheetData || []);
+    setMockupImage(backupData.mockupImage || null);
+    
+    console.log('🔄 バックアップからデータを復元しました');
+    
+    // データ変更後の自動保存はuseEffectで行われる
+  };
 
   return (
     <CopilotKit runtimeUrl="/api/copilotkit">
@@ -306,8 +327,22 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
             onConditionsMarkdownUpdate={setConditionsMarkdown}
             onSupplementMarkdownUpdate={setSupplementMarkdown}
             onSpreadsheetDataUpdate={setSpreadsheetData}
+            onShowBackupManager={() => setIsBackupManagerOpen(true)}
           />
         )}
+
+        {/* バックアップ管理 */}
+        <BackupManager
+          isOpen={isBackupManagerOpen}
+          onClose={() => setIsBackupManagerOpen(false)}
+          onRestore={handleRestoreFromBackup}
+          currentData={{
+            conditionsMarkdown,
+            supplementMarkdown,
+            spreadsheetData,
+            mockupImage
+          }}
+        />
       </div>
     </CopilotKit>
   );

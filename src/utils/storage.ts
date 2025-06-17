@@ -56,7 +56,7 @@ export function loadAppState(): AppState {
 export function saveAppState(state: AppState): void {
   try {
     localStorage.setItem(STORAGE_KEYS.APP_STATE, JSON.stringify(state));
-    console.log('💾 アプリケーション状態を保存しました');
+    // console.log('💾 アプリケーション状態を保存しました');
   } catch (error) {
     console.error('❌ アプリケーション状態の保存に失敗:', error);
   }
