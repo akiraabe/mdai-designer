@@ -37,8 +37,7 @@ interface DocumentEditViewProps {
     supplement?: string;
     spreadsheet?: any;
     mockup?: string | null;
-    domainModels?: any[];
-    modelRelationships?: any[];
+    mermaidCode?: string;
   }) => void;
   onGoBack: () => void;
 }
@@ -64,14 +63,12 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     supplementMarkdown,
     spreadsheetData,
     mockupImage,
-    domainModels,
-    modelRelationships,
+    mermaidCode,
     setConditionsMarkdown,
     setSupplementMarkdown,
     setSpreadsheetData,
     setMockupImage,
-    setDomainModels,
-    setModelRelationships,
+    setMermaidCode,
   } = useDocumentState();
 
   // 初期データの設定
@@ -80,9 +77,8 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     setSupplementMarkdown(document.supplement || '');
     setSpreadsheetData(document.spreadsheet || []);
     setMockupImage(document.mockup || null);
-    setDomainModels(document.domainModels || []);
-    setModelRelationships(document.modelRelationships || []);
-  }, [document, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setDomainModels, setModelRelationships]);
+    setMermaidCode(document.mermaidCode || '');
+  }, [document, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setMermaidCode]);
 
   // データ変更時の自動保存
   useEffect(() => {
@@ -92,15 +88,14 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
         supplement: supplementMarkdown,
         spreadsheet: spreadsheetData,
         mockup: mockupImage,
-        domainModels: domainModels,
-        modelRelationships: modelRelationships
+        mermaidCode: mermaidCode
       });
     };
 
     // 初期ロード以外で保存
     const timer = setTimeout(saveData, 1000);
     return () => clearTimeout(timer);
-  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, domainModels, modelRelationships, document.id, onUpdateDocument]);
+  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, mermaidCode, document.id, onUpdateDocument]);
 
   // ファイル操作フック
   const {
@@ -112,10 +107,12 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     supplementMarkdown,
     spreadsheetData,
     mockupImage,
+    mermaidCode,
     setConditionsMarkdown,
     setSupplementMarkdown,
     setSpreadsheetData,
     setMockupImage,
+    setMermaidCode,
   });
 
   // スプレッドシート操作フック
@@ -230,10 +227,8 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
               )}
               {shouldShowTab(document.type || 'screen', 'models') && (
                 <ModelsSection
-                  domainModels={domainModels}
-                  modelRelationships={modelRelationships}
-                  onModelsUpdate={setDomainModels}
-                  onRelationshipsUpdate={setModelRelationships}
+                  mermaidCode={mermaidCode}
+                  onMermaidCodeUpdate={setMermaidCode}
                 />
               )}
               {shouldShowTab(document.type || 'screen', 'supplement') && (
@@ -272,10 +267,8 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
           {/* データモデルタブ */}
           {activeTab === 'models' && shouldShowTab(document.type || 'screen', 'models') && (
             <ModelsSection
-              domainModels={domainModels}
-              modelRelationships={modelRelationships}
-              onModelsUpdate={setDomainModels}
-              onRelationshipsUpdate={setModelRelationships}
+              mermaidCode={mermaidCode}
+              onMermaidCodeUpdate={setMermaidCode}
             />
           )}
 
