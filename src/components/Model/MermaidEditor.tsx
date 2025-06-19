@@ -1,7 +1,7 @@
 // src/components/Model/MermaidEditor.tsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mermaid from 'mermaid';
-import { Eye, EyeOff, Code } from 'lucide-react';
+import { Eye, Code, Split } from 'lucide-react';
 
 interface MermaidEditorProps {
   value: string;
@@ -32,8 +32,7 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
   onChange,
   placeholder = 'Mermaid記法でER図を記述してください...'
 }) => {
-  const [showPreview, setShowPreview] = useState(true);
-  const [viewMode, setViewMode] = useState<'split' | 'preview-only'>('split');
+  const [displayMode, setDisplayMode] = useState<'split' | 'preview-only' | 'editor-only'>('split');
   const [error, setError] = useState<string | null>(null);
   const [height, setHeight] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
@@ -155,21 +154,34 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
 
   // 値が変更されたときに図表を再描画
   useEffect(() => {
-    if (showPreview) {
+    if (displayMode !== 'editor-only') {
       const timer = setTimeout(renderDiagram, 500); // デバウンス
       return () => clearTimeout(timer);
     }
-  }, [value, showPreview, renderDiagram]);
+  }, [value, displayMode, renderDiagram]);
 
   // 初回レンダリング
   useEffect(() => {
-    if (showPreview) {
+    if (displayMode !== 'editor-only') {
       renderDiagram();
     }
-  }, [showPreview, renderDiagram]);
+  }, [displayMode, renderDiagram]);
 
   // サンプルコードの挿入
   const insertSample = useCallback(() => {
+    // 既存データがある場合は確認ダイアログを表示
+    if (value.trim().length > 0) {
+      const confirmed = window.confirm(
+        '⚠️ サンプルデータで上書きしますか？\n\n' +
+        '現在のMermaidコードが削除され、サンプルのER図に置き換わります。\n' +
+        'この操作は元に戻せません。'
+      );
+      
+      if (!confirmed) {
+        return; // キャンセルされた場合は何もしない
+      }
+    }
+    
     const sampleCode = `erDiagram
     User {
         int id PK
@@ -206,7 +218,7 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
     Product ||--o{ OrderItem : "in"`;
     
     onChange(sampleCode);
-  }, [onChange]);
+  }, [value, onChange]);
 
   return (
     <div
@@ -263,41 +275,35 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
           </button>
           
           <button
-            onClick={() => setViewMode(viewMode === 'split' ? 'preview-only' : 'split')}
+            onClick={() => {
+              // 3モード循環: split → preview-only → editor-only → split
+              setDisplayMode(
+                displayMode === 'split' ? 'preview-only' :
+                displayMode === 'preview-only' ? 'editor-only' : 'split'
+              );
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
               padding: '4px 8px',
               fontSize: '12px',
-              backgroundColor: viewMode === 'preview-only' ? '#059669' : '#f3f4f6',
-              color: viewMode === 'preview-only' ? 'white' : '#374151',
-              border: '1px solid ' + (viewMode === 'preview-only' ? '#059669' : '#d1d5db'),
+              backgroundColor: 
+                displayMode === 'split' ? '#3b82f6' :
+                displayMode === 'preview-only' ? '#059669' : '#6b7280',
+              color: 'white',
+              border: '1px solid ' + (
+                displayMode === 'split' ? '#3b82f6' :
+                displayMode === 'preview-only' ? '#059669' : '#6b7280'
+              ),
               borderRadius: '4px',
               cursor: 'pointer'
             }}
           >
-            {viewMode === 'preview-only' ? <Eye size={14} /> : <Code size={14} />}
-            {viewMode === 'preview-only' ? 'プレビューのみ' : 'エディター表示'}
-          </button>
-          
-          <button
-            onClick={() => setShowPreview(!showPreview)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 8px',
-              fontSize: '12px',
-              backgroundColor: showPreview ? '#3b82f6' : '#f3f4f6',
-              color: showPreview ? 'white' : '#374151',
-              border: '1px solid ' + (showPreview ? '#3b82f6' : '#d1d5db'),
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            {showPreview ? <Eye size={14} /> : <EyeOff size={14} />}
-            {showPreview ? 'プレビュー表示中' : 'プレビュー非表示'}
+            {displayMode === 'split' ? <Split size={14} /> :
+             displayMode === 'preview-only' ? <Eye size={14} /> : <Code size={14} />}
+            {displayMode === 'split' ? '分割表示' :
+             displayMode === 'preview-only' ? 'プレビューのみ' : 'エディターのみ'}
           </button>
         </div>
       </div>
@@ -306,14 +312,15 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
       <div style={{
         display: 'grid',
         gridTemplateColumns: 
-          viewMode === 'preview-only' && showPreview ? '1fr' :
-          showPreview ? '1fr 1fr' : '1fr',
+          displayMode === 'split' ? '1fr 1fr' :
+          displayMode === 'preview-only' ? '1fr' :
+          displayMode === 'editor-only' ? '1fr' : '1fr',
         height: `${height}px`
       }}>
         {/* テキストエディター */}
-        {viewMode !== 'preview-only' && (
+        {displayMode !== 'preview-only' && (
           <div style={{
-            borderRight: showPreview ? '1px solid #e5e7eb' : 'none'
+            borderRight: displayMode === 'split' ? '1px solid #e5e7eb' : 'none'
           }}>
             <textarea
               value={value}
@@ -336,7 +343,7 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
         )}
 
         {/* プレビューエリア */}
-        {showPreview && (
+        {displayMode !== 'editor-only' && (
           <div style={{
             padding: '16px',
             overflow: 'auto',
@@ -344,59 +351,23 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
           }}>
             <style>
               {`
-                /* Mermaidテーブルの交互行の色を落ち着いた色調に変更 */
-                .mermaid-preview table tr:nth-child(even) {
-                  background-color: #f8fafc !important;
+                /* 🎯 シンプル解決：全ての色を白で統一 */
+                .mermaid-preview * {
+                  background-color: white !important;
+                  background: white !important;
+                  fill: white !important;
                 }
-                .mermaid-preview table tr:nth-child(odd) {
-                  background-color: #ffffff !important;
+                .mermaid-preview table {
+                  border: 1px solid #e5e7eb !important;
                 }
-                
-                /* ⭐ 新規追加：テーブルセル直接指定 */
-                .mermaid-preview table td {
-                  background-color: inherit !important;
-                  background: inherit !important;
+                .mermaid-preview table td,
+                .mermaid-preview table th {
+                  border: 1px solid #e5e7eb !important;
+                  background-color: white !important;
+                  color: #374151 !important;
                 }
-                .mermaid-preview table tr:nth-child(even) td {
-                  background-color: #f8fafc !important;
-                  background: #f8fafc !important;
-                }
-                .mermaid-preview table tr:nth-child(odd) td {
-                  background-color: #ffffff !important;
-                  background: #ffffff !important;
-                }
-                
-                /* ⭐ 新規追加：Mermaidの動的生成要素対応 */
-                .mermaid-preview [fill*="#"] {
-                  fill: #f1f5f9 !important;
-                }
-                .mermaid-preview [style*="background"] {
-                  background-color: #f8fafc !important;
-                }
-                
-                /* ⭐ 新規追加：Mermaid内部クラス名対応 */
-                .mermaid-preview .er .entityBox {
-                  fill: #f1f5f9 !important;
-                }
-                .mermaid-preview .er .entity .label {
-                  background-color: #f8fafc !important;
-                }
-                .mermaid-preview .er .attribute {
-                  background-color: inherit !important;
-                }
-                
-                /* ⭐ 青色系の色を全て上書き */
-                .mermaid-preview [fill="#dbeafe"],
-                .mermaid-preview [fill="#bfdbfe"],
-                .mermaid-preview [fill="#93c5fd"],
-                .mermaid-preview [fill="#60a5fa"] {
-                  fill: #f1f5f9 !important;
-                }
-                .mermaid-preview [style*="#dbeafe"],
-                .mermaid-preview [style*="#bfdbfe"],
-                .mermaid-preview [style*="#93c5fd"],
-                .mermaid-preview [style*="#60a5fa"] {
-                  background-color: #f8fafc !important;
+                .mermaid-preview text {
+                  fill: #374151 !important;
                 }
               `}
             </style>
