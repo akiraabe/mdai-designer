@@ -33,9 +33,53 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
   placeholder = 'Mermaid記法でER図を記述してください...'
 }) => {
   const [showPreview, setShowPreview] = useState(true);
+  const [viewMode, setViewMode] = useState<'split' | 'preview-only'>('split');
   const [error, setError] = useState<string | null>(null);
+  const [height, setHeight] = useState(500);
+  const [isResizing, setIsResizing] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const diagramId = useRef(`mermaid-${Date.now()}`);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // リサイズ機能
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const newHeight = e.clientY - rect.top - 48; // ツールバーの高さを引いた値
+    
+    // 最小/最大値を制限
+    const constrainedHeight = Math.max(300, Math.min(800, newHeight));
+    setHeight(constrainedHeight);
+  }, [isResizing]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  // グローバルマウスイベントの管理
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ns-resize';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   // Mermaid図表の描画
   const renderDiagram = useCallback(async () => {
@@ -165,12 +209,15 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
   }, [onChange]);
 
   return (
-    <div style={{
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      backgroundColor: 'white'
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        backgroundColor: 'white',
+        position: 'relative'
+      }}>
       {/* ツールバー */}
       <div style={{
         display: 'flex',
@@ -216,6 +263,25 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
           </button>
           
           <button
+            onClick={() => setViewMode(viewMode === 'split' ? 'preview-only' : 'split')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              fontSize: '12px',
+              backgroundColor: viewMode === 'preview-only' ? '#059669' : '#f3f4f6',
+              color: viewMode === 'preview-only' ? 'white' : '#374151',
+              border: '1px solid ' + (viewMode === 'preview-only' ? '#059669' : '#d1d5db'),
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            {viewMode === 'preview-only' ? <Eye size={14} /> : <Code size={14} />}
+            {viewMode === 'preview-only' ? 'プレビューのみ' : 'エディター表示'}
+          </button>
+          
+          <button
             onClick={() => setShowPreview(!showPreview)}
             style={{
               display: 'flex',
@@ -239,31 +305,35 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
       {/* エディター＋プレビューエリア */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: showPreview ? '1fr 1fr' : '1fr',
-        height: '500px'
+        gridTemplateColumns: 
+          viewMode === 'preview-only' && showPreview ? '1fr' :
+          showPreview ? '1fr 1fr' : '1fr',
+        height: `${height}px`
       }}>
         {/* テキストエディター */}
-        <div style={{
-          borderRight: showPreview ? '1px solid #e5e7eb' : 'none'
-        }}>
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            style={{
-              width: '100%',
-              height: '100%',
-              padding: '16px',
-              border: 'none',
-              outline: 'none',
-              fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
-              fontSize: '13px',
-              lineHeight: '1.5',
-              resize: 'none',
-              backgroundColor: '#fafafa'
-            }}
-          />
-        </div>
+        {viewMode !== 'preview-only' && (
+          <div style={{
+            borderRight: showPreview ? '1px solid #e5e7eb' : 'none'
+          }}>
+            <textarea
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder={placeholder}
+              style={{
+                width: '100%',
+                height: '100%',
+                padding: '16px',
+                border: 'none',
+                outline: 'none',
+                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace',
+                fontSize: '13px',
+                lineHeight: '1.5',
+                resize: 'none',
+                backgroundColor: '#fafafa'
+              }}
+            />
+          </div>
+        )}
 
         {/* プレビューエリア */}
         {showPreview && (
@@ -272,8 +342,67 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
             overflow: 'auto',
             backgroundColor: 'white'
           }}>
+            <style>
+              {`
+                /* Mermaidテーブルの交互行の色を落ち着いた色調に変更 */
+                .mermaid-preview table tr:nth-child(even) {
+                  background-color: #f8fafc !important;
+                }
+                .mermaid-preview table tr:nth-child(odd) {
+                  background-color: #ffffff !important;
+                }
+                
+                /* ⭐ 新規追加：テーブルセル直接指定 */
+                .mermaid-preview table td {
+                  background-color: inherit !important;
+                  background: inherit !important;
+                }
+                .mermaid-preview table tr:nth-child(even) td {
+                  background-color: #f8fafc !important;
+                  background: #f8fafc !important;
+                }
+                .mermaid-preview table tr:nth-child(odd) td {
+                  background-color: #ffffff !important;
+                  background: #ffffff !important;
+                }
+                
+                /* ⭐ 新規追加：Mermaidの動的生成要素対応 */
+                .mermaid-preview [fill*="#"] {
+                  fill: #f1f5f9 !important;
+                }
+                .mermaid-preview [style*="background"] {
+                  background-color: #f8fafc !important;
+                }
+                
+                /* ⭐ 新規追加：Mermaid内部クラス名対応 */
+                .mermaid-preview .er .entityBox {
+                  fill: #f1f5f9 !important;
+                }
+                .mermaid-preview .er .entity .label {
+                  background-color: #f8fafc !important;
+                }
+                .mermaid-preview .er .attribute {
+                  background-color: inherit !important;
+                }
+                
+                /* ⭐ 青色系の色を全て上書き */
+                .mermaid-preview [fill="#dbeafe"],
+                .mermaid-preview [fill="#bfdbfe"],
+                .mermaid-preview [fill="#93c5fd"],
+                .mermaid-preview [fill="#60a5fa"] {
+                  fill: #f1f5f9 !important;
+                }
+                .mermaid-preview [style*="#dbeafe"],
+                .mermaid-preview [style*="#bfdbfe"],
+                .mermaid-preview [style*="#93c5fd"],
+                .mermaid-preview [style*="#60a5fa"] {
+                  background-color: #f8fafc !important;
+                }
+              `}
+            </style>
             <div
               ref={previewRef}
+              className="mermaid-preview"
               style={{
                 minHeight: '200px',
                 textAlign: 'center'
@@ -296,25 +425,31 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
         )}
       </div>
 
-      {/* フッター（ヘルプ情報） */}
-      <div style={{
-        padding: '8px 12px',
-        borderTop: '1px solid #e5e7eb',
-        backgroundColor: '#f9fafb',
-        fontSize: '11px',
-        color: '#6b7280'
-      }}>
-        💡 <strong>Mermaid ER図記法:</strong> 
-        エンティティ定義 → <code>EntityName &#123;&#123; field_type field_name &#125;&#125;</code> | 
-        関係定義 → <code>Entity1 ||--o&#123;&#123; Entity2 : "relationship"</code> | 
-        <a 
-          href="https://mermaid.js.org/syntax/entityRelationshipDiagram.html" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          style={{ color: '#3b82f6', textDecoration: 'underline' }}
-        >
-          詳細ドキュメント
-        </a>
+      {/* リサイズハンドル */}
+      <div
+        onMouseDown={handleMouseDown}
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '8px',
+          cursor: 'ns-resize',
+          backgroundColor: isResizing ? '#10b981' : 'transparent',
+          borderTop: isResizing ? '2px solid #10b981' : '2px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.2s'
+        }}
+      >
+        <div style={{
+          width: '40px',
+          height: '4px',
+          backgroundColor: isResizing ? '#10b981' : '#9ca3af',
+          borderRadius: '2px',
+          transition: 'all 0.2s'
+        }} />
       </div>
     </div>
   );
