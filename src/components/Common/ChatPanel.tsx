@@ -229,11 +229,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       '追加して', '変更して', '修正して', '削除して', '更新して',
       '改善して', '強化して', '見直して', '調整して', 'に変えて',
       'を加えて', 'を含めて', 'を外して', 'を消して',
-      // データモデル関連
-      'データモデル', 'er図', 'エンティティ', 'を作成して', 'を作って',
-      'モデルを', 'エンティティを', '関係を', 'テーブルを'
+      // 既存データに対する修正
+      '関係を', 'テーブルを', 'フィールドを', '属性を'
     ];
     return modificationKeywords.some(keyword => lowerMessage.includes(keyword));
+  };
+
+  // 新規作成要求の判定
+  const isCreationRequest = (message: string): boolean => {
+    const lowerMessage = message.toLowerCase();
+    const creationKeywords = [
+      'を作成して', 'を作って', 'データモデルを', 'er図を', 
+      'エンティティを作', 'モデルを作', '新しく', 'から作成',
+      'ダイアグラムを', 'テーブル設計', 'データ設計'
+    ];
+    return creationKeywords.some(keyword => lowerMessage.includes(keyword));
+  };
+
+  // データが空かどうかの判定
+  const isEmpty = (data: WebUIData): boolean => {
+    return (!data.mermaidCode || data.mermaidCode.trim().length < 10);
   };
 
   // 現在のページデータを解析する関数
@@ -373,8 +388,71 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     });
     
     try {
-      // 修正提案要求の場合
-      if (isModificationRequest(userMessage)) {
+      // 新規作成 vs 修正提案の判定
+      if (isCreationRequest(userMessage) && isEmpty(currentData)) {
+        console.log('🆕 新規作成要求として認識:', userMessage);
+        
+        // データモデル・ER図関連の新規作成の場合、mermaid生成として処理
+        if (userMessage.toLowerCase().includes('データモデル') || 
+            userMessage.toLowerCase().includes('er図') || 
+            userMessage.toLowerCase().includes('エンティティ')) {
+          
+          // mermaid専用の生成プロンプトを作成
+          const mermaidPrompt = `
+以下の要求に基づいてMermaid記法でER図を生成してください：
+
+要求: ${userMessage}
+
+現在の設計書状況:
+- 表示条件: ${currentData.conditionsMarkdown?.length || 0}文字
+- 補足説明: ${currentData.supplementMarkdown?.length || 0}文字
+- スプレッドシート: ${currentData.spreadsheetData?.[0]?.celldata?.length || 0}セル
+- Mermaid ER図: 未設定（新規作成）
+
+Mermaid ER図記法で応答してください。erDiagramで始まり、エンティティと関係を定義してください。
+
+例:
+erDiagram
+    User {
+        int id PK
+        string name
+        string email
+        datetime created_at
+    }
+    Order {
+        int id PK
+        int user_id FK
+        decimal amount
+        datetime order_date
+    }
+    User ||--o{ Order : "has many"
+          `;
+          
+          const mermaidResponse = await generateChatResponse(mermaidPrompt, currentData);
+          
+          // mermaidコードを抽出
+          const mermaidMatch = mermaidResponse.match(/```(?:mermaid)?\s*(erDiagram[\s\S]*?)```/i) || 
+                              mermaidResponse.match(/(erDiagram[\s\S]*)/i);
+          
+          if (mermaidMatch) {
+            const mermaidCode = mermaidMatch[1].trim();
+            console.log('🎨 Mermaidコード生成:', mermaidCode.substring(0, 100));
+            onMermaidCodeUpdate(mermaidCode);
+            return `🎨 **ER図を生成しました！**\n\n📊 **データモデル**: Mermaid記法でER図を作成\n- 「データモデル」タブで確認してください\n\n🎉 新しいER図が生成されました！さらに修正や追加が必要でしたらお知らせください。`;
+          } else {
+            return `❌ ER図の生成に失敗しました。再度お試しください。`;
+          }
+        } else {
+          // その他の新規作成（従来通り）
+          const generatedDraft = await generateDesignDraft({
+            prompt: userMessage,
+            context: currentData
+          });
+          const resultText = applyGeneratedDraft(generatedDraft);
+          return resultText;
+        }
+        
+      } else if (isModificationRequest(userMessage)) {
         console.log('🎯 修正提案要求として認識:', userMessage);
         const proposal = await ModificationService.generateModificationProposal(userMessage, currentData);
         
