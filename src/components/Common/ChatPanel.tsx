@@ -22,10 +22,12 @@ interface ChatPanelProps {
   supplementMarkdown: string;
   spreadsheetData: any[];
   mockupImage: string | null;
+  mermaidCode: string;
   // データ更新機能
   onConditionsMarkdownUpdate: (markdown: string) => void;
   onSupplementMarkdownUpdate: (markdown: string) => void;
   onSpreadsheetDataUpdate: (data: any[]) => void;
+  onMermaidCodeUpdate: (code: string) => void;
   // バックアップ管理機能
   onShowBackupManager?: () => void;
 }
@@ -37,9 +39,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   supplementMarkdown, 
   spreadsheetData, 
   mockupImage,
+  mermaidCode,
   onConditionsMarkdownUpdate,
   onSupplementMarkdownUpdate,
   onSpreadsheetDataUpdate,
+  onMermaidCodeUpdate,
   onShowBackupManager
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -224,7 +228,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     const modificationKeywords = [
       '追加して', '変更して', '修正して', '削除して', '更新して',
       '改善して', '強化して', '見直して', '調整して', 'に変えて',
-      'を加えて', 'を含めて', 'を外して', 'を消して'
+      'を加えて', 'を含めて', 'を外して', 'を消して',
+      // データモデル関連
+      'データモデル', 'er図', 'エンティティ', 'を作成して', 'を作って',
+      'モデルを', 'エンティティを', '関係を', 'テーブルを'
     ];
     return modificationKeywords.some(keyword => lowerMessage.includes(keyword));
   };
@@ -271,7 +278,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         conditionsMarkdown,
         supplementMarkdown,
         spreadsheetData,
-        mockupImage
+        mockupImage,
+        mermaidCode
       };
 
       // 修正提案を適用
@@ -287,6 +295,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         }
         if (JSON.stringify(result.updatedData.spreadsheetData) !== JSON.stringify(currentData.spreadsheetData)) {
           onSpreadsheetDataUpdate(result.updatedData.spreadsheetData);
+        }
+        if (result.updatedData.mermaidCode !== currentData.mermaidCode) {
+          console.log('🎯 Mermaidコード更新:', {
+            before: currentData.mermaidCode?.substring(0, 50) || '（空）',
+            after: result.updatedData.mermaidCode?.substring(0, 50) || '（空）',
+            changed: true
+          });
+          onMermaidCodeUpdate(result.updatedData.mermaidCode);
+        } else {
+          console.log('⏭️ Mermaidコード変更なし:', {
+            current: currentData.mermaidCode?.substring(0, 50) || '（空）',
+            updated: result.updatedData.mermaidCode?.substring(0, 50) || '（空）'
+          });
         }
 
         // 成功メッセージを追加
@@ -338,12 +359,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       conditionsMarkdown,
       supplementMarkdown, 
       spreadsheetData,
-      mockupImage
+      mockupImage,
+      mermaidCode
     };
+    
+    console.log('🔍 ChatPanel currentData:', {
+      conditionsLength: conditionsMarkdown?.length || 0,
+      supplementLength: supplementMarkdown?.length || 0,
+      spreadsheetCells: spreadsheetData?.[0]?.celldata?.length || 0,
+      hasImage: !!mockupImage,
+      mermaidLength: mermaidCode?.length || 0,
+      mermaidPreview: mermaidCode?.substring(0, 100) || '（空）'
+    });
     
     try {
       // 修正提案要求の場合
       if (isModificationRequest(userMessage)) {
+        console.log('🎯 修正提案要求として認識:', userMessage);
         const proposal = await ModificationService.generateModificationProposal(userMessage, currentData);
         
         // 修正提案をメッセージとして追加

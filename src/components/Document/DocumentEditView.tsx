@@ -129,11 +129,13 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     supplementMarkdown: string;
     spreadsheetData: any[];
     mockupImage: string | null;
+    mermaidCode: string;
   }) => {
     setConditionsMarkdown(backupData.conditionsMarkdown || '');
     setSupplementMarkdown(backupData.supplementMarkdown || '');
     setSpreadsheetData(backupData.spreadsheetData || []);
     setMockupImage(backupData.mockupImage || null);
+    setMermaidCode(backupData.mermaidCode || '');
     
     console.log('🔄 バックアップからデータを復元しました');
     
@@ -317,9 +319,11 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
             supplementMarkdown={supplementMarkdown}
             spreadsheetData={spreadsheetData}
             mockupImage={mockupImage}
+            mermaidCode={mermaidCode}
             onConditionsMarkdownUpdate={setConditionsMarkdown}
             onSupplementMarkdownUpdate={setSupplementMarkdown}
             onSpreadsheetDataUpdate={setSpreadsheetData}
+            onMermaidCodeUpdate={setMermaidCode}
             onShowBackupManager={() => setIsBackupManagerOpen(true)}
           />
         )}
@@ -333,7 +337,8 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
             conditionsMarkdown,
             supplementMarkdown,
             spreadsheetData,
-            mockupImage
+            mockupImage,
+            mermaidCode
           }}
         />
       </div>

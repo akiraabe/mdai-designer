@@ -67,6 +67,12 @@ export class ModificationService {
 - 補足説明: ${currentData.supplementMarkdown?.length || 0}文字
 - スプレッドシート: ${currentData.spreadsheetData?.[0]?.celldata?.length || 0}セル
 - 画面イメージ: ${currentData.mockupImage ? 'あり' : 'なし'}
+- Mermaid ER図: ${currentData.mermaidCode?.length || 0}文字
+
+### 現在のMermaid ER図コード:
+\`\`\`
+${currentData.mermaidCode || '（未設定）'}
+\`\`\`
 
 ## 応答形式（必須）
 必ず以下のJSON形式で応答してください：
@@ -90,10 +96,30 @@ export class ModificationService {
 
 ## 重要な指針
 1. **JSON形式必須**: 上記の形式以外では応答しないでください
-2. **ターゲット指定**: target は "conditions", "supplement", "spreadsheet" のみ使用
+2. **ターゲット指定**: target は "conditions", "supplement", "spreadsheet", "mermaid" のみ使用
 3. **安全性優先**: 既存データを壊さない修正方法を提案
 4. **具体性**: 変更位置と内容を明確に指定
 5. **理由明示**: なぜその変更が必要かを説明
+
+## Mermaid ER図記法（mermaidターゲット使用時）
+ER図、データモデル、エンティティ関係に関する要求の場合は target: "mermaid" を使用し、以下の記法で記述してください：
+
+\`\`\`
+erDiagram
+    User {
+        int id PK
+        string name
+        string email
+        datetime created_at
+    }
+    Order {
+        int id PK
+        int user_id FK
+        decimal amount
+        datetime order_date
+    }
+    User ||--o{ Order : "has many"
+\`\`\`
 
 必ずJSON形式で応答してください。
 `;
@@ -266,6 +292,11 @@ export class ModificationService {
       case 'spreadsheet':
         this.applySpreadsheetChange(change, data);
         break;
+      case 'mermaid':
+        console.log('🎯 Mermaid変更適用開始:', change);
+        this.applyMermaidChange(change, data);
+        console.log('✅ Mermaid変更適用完了:', data.mermaidCode?.substring(0, 100));
+        break;
       default:
         throw new Error(`未対応のターゲット: ${change.target}`);
     }
@@ -305,6 +336,52 @@ export class ModificationService {
           // 削除マーカー付きで残す
           const deletionMarker = `~~${change.originalContent}~~ **(AI削除提案)**`;
           data[field] = currentContent.replace(change.originalContent, deletionMarker);
+        }
+        break;
+    }
+  }
+
+  /**
+   * Mermaidコードの変更を適用
+   */
+  private static applyMermaidChange(change: ProposedChange, data: WebUIData): void {
+    const currentContent = data.mermaidCode || '';
+    
+    switch (change.action) {
+      case 'add':
+        // 既存のMermaidコードに追加
+        if (currentContent.trim()) {
+          // 既存コードがある場合、適切な位置に追加
+          if (currentContent.includes('erDiagram')) {
+            // ER図の場合、新しいエンティティや関係を追加
+            data.mermaidCode = currentContent + '\n\n' + change.newContent;
+          } else {
+            // 新しい図表として追加
+            data.mermaidCode = currentContent + '\n\n' + change.newContent;
+          }
+        } else {
+          // 新規作成
+          data.mermaidCode = change.newContent;
+        }
+        break;
+        
+      case 'modify':
+        if (change.originalContent && currentContent.includes(change.originalContent)) {
+          // 既存内容を置換
+          data.mermaidCode = currentContent.replace(change.originalContent, change.newContent);
+        } else {
+          // 見つからない場合は全体を更新
+          data.mermaidCode = change.newContent;
+        }
+        break;
+        
+      case 'delete':
+        if (change.originalContent && currentContent.includes(change.originalContent)) {
+          // 指定された部分を削除
+          data.mermaidCode = currentContent.replace(change.originalContent, '');
+        } else {
+          // 全体クリア
+          data.mermaidCode = '';
         }
         break;
     }
