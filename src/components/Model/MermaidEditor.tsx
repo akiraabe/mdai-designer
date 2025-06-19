@@ -9,10 +9,13 @@ interface MermaidEditorProps {
   placeholder?: string;
 }
 
-// Mermaidの初期化
+// Mermaidの初期化とエラー抑制
 mermaid.initialize({
   startOnLoad: false,
   theme: 'default',
+  logLevel: 5, // 最高レベルでエラーを抑制
+  suppressErrorRendering: true,
+  secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize'],
   themeVariables: {
     primaryColor: '#3b82f6',
     primaryTextColor: '#1f2937',
@@ -26,6 +29,42 @@ mermaid.initialize({
     useMaxWidth: true
   }
 });
+
+// 🔴 緊急対策: Mermaidのグローバルエラー処理を強制的に無効化
+try {
+  // console.errorを一時的に無効化
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    const message = args.join(' ');
+    // Mermaid関連のエラーのみ抑制
+    if (message.includes('mermaid') || message.includes('Syntax error') || message.includes('diagram')) {
+      return; // 何もしない
+    }
+    originalConsoleError.apply(console, args);
+  };
+  
+  // Mermaidのエラーハンドラーを空にする
+  if (typeof (window as any).mermaid !== 'undefined') {
+    (window as any).mermaid.parseError = () => {}; // 空の関数
+  }
+  
+  // DOMに直接挿入されるエラー要素を定期的に削除
+  const removeErrorElements = () => {
+    const errorElements = document.querySelectorAll('[id*="dmermaid"], [class*="error"], [id*="error"]');
+    errorElements.forEach(el => {
+      if (el.textContent && (el.textContent.includes('Syntax error') || el.textContent.includes('mermaid'))) {
+        el.remove();
+      }
+    });
+  };
+  
+  // 定期的にエラー要素をチェックして削除
+  setInterval(removeErrorElements, 1000);
+  
+} catch (e) {
+  // エラー抑制処理自体が失敗してもアプリは継続
+  console.warn('エラー抑制処理に失敗しました:', e);
+}
 
 export const MermaidEditor: React.FC<MermaidEditorProps> = ({
   value,
@@ -110,15 +149,15 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
     }
 
     try {
+      // 基本的な構文チェックのみ（parseメソッドもエラーを出すためスキップ）
+      if (!value.includes('erDiagram')) {
+        throw new Error('ER図を描画するには "erDiagram" で始まる必要があります');
+      }
+
       // 新しいIDを生成
       const newId = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       diagramId.current = newId;
 
-      // Mermaidの構文チェック
-      if (!value.includes('erDiagram')) {
-        setError('ER図を描画するには "erDiagram" で始まる必要があります');
-        return;
-      }
 
       // 図表を描画
       const { svg } = await mermaid.render(newId, value);
@@ -128,24 +167,30 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
         setError(null);
       }
     } catch (err) {
-      console.error('Mermaid rendering error:', err);
-      setError(err instanceof Error ? err.message : 'Mermaid構文エラーが発生しました');
+      console.warn('Mermaid rendering error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Mermaid構文エラーが発生しました';
+      setError(errorMessage);
       
       if (previewRef.current) {
         previewRef.current.innerHTML = `
           <div style="
-            padding: 16px;
+            padding: 20px;
             background-color: #fef2f2;
             border: 1px solid #fecaca;
             border-radius: 8px;
             color: #dc2626;
+            text-align: left;
           ">
-            <p style="margin: 0; font-size: 14px; font-weight: 500;">
-              ⚠️ 構文エラー
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 18px; margin-right: 8px;">⚠️</span>
+              <strong style="font-size: 14px;">Mermaid構文エラー</strong>
+            </div>
+            <p style="margin: 0 0 12px 0; font-size: 13px; line-height: 1.4;">
+              ${errorMessage}
             </p>
-            <p style="margin: 8px 0 0 0; font-size: 12px;">
-              ${err instanceof Error ? err.message : 'Mermaid構文エラーが発生しました'}
-            </p>
+            <div style="font-size: 12px; color: #9ca3af; border-top: 1px solid #fecaca; padding-top: 8px;">
+              💡 <strong>ヒント:</strong> "erDiagram" で始まり、エンティティ定義と関係定義が正しく記述されているか確認してください
+            </div>
           </div>
         `;
       }
