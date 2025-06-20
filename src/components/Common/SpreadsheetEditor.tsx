@@ -3,44 +3,7 @@ import React, { useCallback, useEffect, useRef, useMemo, useState } from 'react'
 import { Workbook } from '@fortune-sheet/react';
 import '@fortune-sheet/react/dist/index.css';
 import { SpreadsheetErrorBoundary } from './SpreadsheetErrorBoundary';
-
-interface CellData {
-  r: number;
-  c: number;
-  v: {
-    v: any;
-    m?: string;
-    ct?: {
-      fa: string;
-      t: string;
-    };
-  } | any;
-}
-
-interface SheetConfig {
-  merge?: Record<string, any>;
-  rowlen?: Record<string, number>;
-  columnlen?: Record<string, number>;
-  rowhidden?: Record<string, number>;
-  colhidden?: Record<string, number>;
-  borderInfo?: any[];
-  authority?: Record<string, any>;
-}
-
-interface SpreadsheetData {
-  name: string;
-  celldata?: CellData[];
-  row: number;
-  column: number;
-  order: number;
-  config?: SheetConfig;
-  id?: string;
-  status?: number;
-  hide?: number;
-  defaultRowHeight?: number;
-  defaultColWidth?: number;
-  data?: any[][];
-}
+import type { SpreadsheetData } from '../../types/spreadsheet';
 
 interface SpreadsheetEditorProps {
   data: SpreadsheetData[];
@@ -345,7 +308,12 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
         celldata: [],
         row: 100,
         column: 26,
-        order: 0
+        order: 0,
+        id: "default-sheet",
+        status: 1,
+        hide: 0,
+        defaultRowHeight: 19,
+        defaultColWidth: 73
       }]);
     }}>
       <div ref={containerRef} data-testid="spreadsheet-container" style={{ height: `${height}px`, width: '100%', minHeight: '300px', position: 'relative' }}>

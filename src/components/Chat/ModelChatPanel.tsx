@@ -6,7 +6,9 @@ import { BaseChatPanel, type ChatMessage } from './BaseChatPanel';
 import { ChatMessageActions } from './ChatMessage';
 import { generateChatResponse } from '../../services/aiService';
 import { ModificationService } from '../../services/modificationService';
+import { DocumentReferenceService } from '../../services/documentReferenceService';
 import type { WebUIData, ModificationProposal } from '../../types/aiTypes';
+import type { AppState } from '../../types';
 
 interface ModelChatPanelProps {
   isOpen: boolean;
@@ -19,6 +21,10 @@ interface ModelChatPanelProps {
   onMermaidCodeUpdate: (code: string) => void;
   // バックアップ管理機能
   onShowBackupManager?: () => void;
+  // @メンション機能用
+  appState: AppState;
+  currentProjectId: string;
+  currentDocumentId: string;
 }
 
 export const ModelChatPanel: React.FC<ModelChatPanelProps> = ({
@@ -28,7 +34,10 @@ export const ModelChatPanel: React.FC<ModelChatPanelProps> = ({
   mermaidCode,
   onSupplementMarkdownUpdate,
   onMermaidCodeUpdate,
-  onShowBackupManager
+  onShowBackupManager,
+  appState,
+  currentProjectId,
+  currentDocumentId
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -41,9 +50,22 @@ export const ModelChatPanel: React.FC<ModelChatPanelProps> = ({
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // データモデル設計書専用の定型質問
+  // @メンション機能: 参照可能な設計書を取得
+  const referenceableDocuments = DocumentReferenceService.getReferenceableDocuments(
+    appState, 
+    currentProjectId, 
+    currentDocumentId
+  );
+  const hasScreenDocument = referenceableDocuments.some(doc => doc.type === 'screen');
+
+  // データモデル設計書専用の定型質問（逆参照対応）
   const suggestedQuestions = [
     '現在のデータは？',
+    ...(hasScreenDocument ? [
+      '@画面設計書 を参考にデータモデルを改善',
+      '@画面設計書 の項目からエンティティを設計',
+      '@画面設計書 に基づくER図の最適化'
+    ] : []),
     'ECサイトのデータモデルを作って',
     'ユーザー管理のER図を生成',
     '注文システムのエンティティを設計',
@@ -397,9 +419,10 @@ erDiagram
       onQuestionClick={handleQuestionClick}
       chatTitle="データモデル設計AIアシスタント"
       chatColor="#d97706"
+      onMentionTriggered={() => referenceableDocuments}
     >
       <ChatMessageActions
-        message={undefined as any}
+        message={{} as any}
         onApplyProposal={handleModificationProposal}
         onRejectProposal={handleRejectProposal}
       />

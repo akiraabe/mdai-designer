@@ -6,7 +6,10 @@ import { BaseChatPanel, type ChatMessage } from './BaseChatPanel';
 import { ChatMessageActions } from './ChatMessage';
 import { generateDesignDraft, generateChatResponse } from '../../services/aiService';
 import { ModificationService } from '../../services/modificationService';
+import { DocumentReferenceService } from '../../services/documentReferenceService';
 import type { WebUIData, GeneratedDraft, ModificationProposal } from '../../types/aiTypes';
+import type { AppState } from '../../types';
+import type { SpreadsheetData } from '../../types/spreadsheet';
 
 interface ScreenChatPanelProps {
   isOpen: boolean;
@@ -14,14 +17,18 @@ interface ScreenChatPanelProps {
   // 画面設計書専用データアクセス
   conditionsMarkdown: string;
   supplementMarkdown: string;
-  spreadsheetData: unknown[];
+  spreadsheetData: SpreadsheetData[];
   mockupImage: string | null;
   // 画面設計書専用データ更新機能
   onConditionsMarkdownUpdate: (markdown: string) => void;
   onSupplementMarkdownUpdate: (markdown: string) => void;
-  onSpreadsheetDataUpdate: (data: unknown[]) => void;
+  onSpreadsheetDataUpdate: (data: SpreadsheetData[]) => void;
   // バックアップ管理機能
   onShowBackupManager?: () => void;
+  // Model Driven Architecture対応
+  appState: AppState;
+  currentProjectId: string;
+  currentDocumentId: string;
 }
 
 export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
@@ -34,7 +41,10 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
   onConditionsMarkdownUpdate,
   onSupplementMarkdownUpdate,
   onSpreadsheetDataUpdate,
-  onShowBackupManager
+  onShowBackupManager,
+  appState,
+  currentProjectId,
+  currentDocumentId
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -47,9 +57,40 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 画面設計書専用の定型質問
+  // Model Driven Architecture対応: 参照可能な設計書を取得
+  const referenceableDocuments = DocumentReferenceService.getReferenceableDocuments(
+    appState, 
+    currentProjectId, 
+    currentDocumentId
+  );
+  const hasDataModelDocument = referenceableDocuments.some(doc => doc.type === 'model');
+  
+  console.log('🖥️ ScreenChatPanel: 参照可能な設計書', {
+    projectId: currentProjectId,
+    documentId: currentDocumentId,
+    referenceableCount: referenceableDocuments.length,
+    documents: referenceableDocuments.map(doc => ({ name: doc.name, type: doc.type })),
+    hasDataModel: hasDataModelDocument
+  });
+
+  // @メンション機能のデバッグ用関数
+  const debugMentionFunction = () => {
+    console.log('🔍 @メンション機能デバッグ:', {
+      referenceableDocuments: referenceableDocuments.length,
+      sampleDocuments: referenceableDocuments.slice(0, 3).map(doc => ({ name: doc.name, type: doc.type })),
+      functionType: typeof DocumentReferenceService.getReferenceableDocuments
+    });
+    return referenceableDocuments;
+  };
+
+  // 画面設計書専用の定型質問（Model Driven対応）
   const suggestedQuestions = [
     '現在のデータは？',
+    ...(hasDataModelDocument ? [
+      '@データモデル設計書 を参考にユーザー管理画面を作って',
+      '@データモデル設計書 のエンティティから項目定義を生成',
+      '@データモデル設計書 に基づく CRUD画面を設計'
+    ] : []),
     'ECサイトの商品一覧画面を作って',
     '管理画面のユーザー項目を生成',
     'ログイン画面の表示条件を作成',
@@ -75,11 +116,17 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
           v: { v: cell.v, ct: { t: 'inlineStr' } }
         }));
         
-        const sheetData = [{
+        const sheetData: SpreadsheetData[] = [{
           name: 'AI生成シート',
           celldata: cellData,
           row: Math.max(...cellData.map(c => c.r)) + 1,
-          column: Math.max(...cellData.map(c => c.c)) + 1
+          column: Math.max(...cellData.map(c => c.c)) + 1,
+          order: 0,
+          id: 'ai-generated-sheet',
+          status: 1,
+          hide: 0,
+          defaultRowHeight: 19,
+          defaultColWidth: 73
         }];
         
         onSpreadsheetDataUpdate(sheetData);
@@ -109,11 +156,17 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
             v: { v: cell.v, ct: { t: 'inlineStr' } }
           }));
           
-          const sheetData = [{
+          const sheetData: SpreadsheetData[] = [{
             name: 'AI生成シート',
             celldata: cellData,
             row: Math.max(...cellData.map(c => c.r)) + 1,
-            column: Math.max(...cellData.map(c => c.c)) + 1
+            column: Math.max(...cellData.map(c => c.c)) + 1,
+            order: 0,
+            id: 'ai-generated-mixed-sheet',
+            status: 1,
+            hide: 0,
+            defaultRowHeight: 19,
+            defaultColWidth: 73
           }];
           
           onSpreadsheetDataUpdate(sheetData);
@@ -191,13 +244,6 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
 「表示条件」タブを確認してください。`;
   };
 
-  // 画面設計書データが空かどうかの判定
-  const isDataEmpty = (data: WebUIData): boolean => {
-    const hasConditions = data.conditionsMarkdown && data.conditionsMarkdown.trim().length > 0;
-    const hasSpreadsheet = data.spreadsheetData && data.spreadsheetData.length > 0 && (data.spreadsheetData[0] as any)?.celldata?.length > 0;
-    const hasMockup = data.mockupImage && data.mockupImage.length > 0;
-    return !(hasConditions || hasSpreadsheet || hasMockup);
-  };
 
   // 画面設計特化の要求判定
   const isScreenDesignRequest = (message: string): boolean => {
@@ -286,7 +332,71 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
     }
   };
 
-  // AI統合応答機能（画面設計書特化）
+  // @メンション処理：参照されたデータモデル設計書の内容を取得
+  const processDataModelReference = (userMessage: string): { processedMessage: string; context: string } => {
+    const mentions = DocumentReferenceService.parseMentions(userMessage);
+    let contextInfo = '';
+    let processedMessage = userMessage;
+
+    for (const mention of mentions) {
+      const referencedDoc = DocumentReferenceService.findDocumentByMention(
+        appState, 
+        currentProjectId, 
+        mention
+      );
+
+      if (referencedDoc && referencedDoc.type === 'model') {
+        console.log('🗄️ データモデル設計書参照:', referencedDoc.name);
+        
+        // Mermaidコードからエンティティ情報を抽出
+        if (referencedDoc.content.mermaidCode) {
+          const entities = DocumentReferenceService.parseEntitiesFromMermaid(referencedDoc.content.mermaidCode);
+          
+          if (entities.length > 0) {
+            contextInfo += `\n\n## 📊 参照データモデル: ${referencedDoc.name}\n\n`;
+            
+            entities.forEach(entity => {
+              contextInfo += `### ${entity.name}エンティティ\n`;
+              contextInfo += '| フィールド名 | データ型 | 制約 |\n';
+              contextInfo += '|------------|----------|------|\n';
+              
+              entity.fields.forEach(field => {
+                const constraints = [];
+                if (field.primaryKey) constraints.push('PK');
+                if (field.foreignKey) constraints.push('FK');
+                if (!field.nullable) constraints.push('NOT NULL');
+                
+                contextInfo += `| ${field.name} | ${field.type} | ${constraints.join(', ')} |\n`;
+              });
+              
+              if (entity.relationships.length > 0) {
+                contextInfo += '\n**リレーション:**\n';
+                entity.relationships.forEach(rel => {
+                  contextInfo += `- ${rel.type}: ${rel.targetEntity}${rel.description ? ` (${rel.description})` : ''}\n`;
+                });
+              }
+              contextInfo += '\n';
+            });
+          }
+        }
+
+        // 補足説明も含める
+        if (referencedDoc.content.supplement) {
+          contextInfo += `### 📝 補足説明\n${referencedDoc.content.supplement}\n\n`;
+        }
+
+        // メッセージから@メンションを除去し、参照内容の説明に置換
+        processedMessage = processedMessage.replace(
+          `@${mention}`, 
+          `上記のデータモデル(${referencedDoc.name})`
+        );
+      }
+    }
+
+    return { processedMessage, context: contextInfo };
+  };
+
+  // AI統合応答機能（Model Driven Architecture対応）
   const getAIResponse = async (userMessage: string): Promise<string> => {
     const currentData: WebUIData = {
       conditionsMarkdown,
@@ -300,14 +410,23 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
       message: userMessage.substring(0, 100),
       hasConditions: !!conditionsMarkdown,
       hasSpreadsheet: spreadsheetData?.length > 0,
-      hasMockup: !!mockupImage
+      hasMockup: !!mockupImage,
+      mentions: DocumentReferenceService.parseMentions(userMessage)
     });
 
     try {
+      // @メンション処理を実行
+      const { processedMessage, context } = processDataModelReference(userMessage);
+      const hasModelReference = context.length > 0;
+      
+      if (hasModelReference) {
+        console.log('🗄️ Model Driven Architecture: データモデル参照を検出');
+      }
+
       // 修正提案の場合
-      if (isModificationRequest(userMessage)) {
-        console.log('🎯 画面設計書修正提案要求として認識:', userMessage);
-        const proposal = await ModificationService.generateModificationProposal(userMessage, currentData);
+      if (isModificationRequest(processedMessage)) {
+        console.log('🎯 画面設計書修正提案要求として認識:', processedMessage);
+        const proposal = await ModificationService.generateModificationProposal(processedMessage, currentData);
         
         // 修正提案をメッセージとして追加
         const proposalMessage: ChatMessage = {
@@ -327,12 +446,12 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
       }
 
       // /writeコマンドの処理
-      if (userMessage.startsWith('/write')) {
+      if (processedMessage.startsWith('/write')) {
         return writeToMarkdown();
       }
 
       // /backupコマンドの処理
-      if (userMessage.startsWith('/backup')) {
+      if (processedMessage.startsWith('/backup')) {
         if (onShowBackupManager) {
           onShowBackupManager();
           return '🔄 **バックアップ管理画面を開きました**\n\nバックアップの作成・復元・削除が可能です。';
@@ -341,10 +460,26 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
         }
       }
 
-      // 画面設計生成要求の場合
-      if (isScreenDesignRequest(userMessage)) {
+      // Model Driven画面設計生成の場合
+      if (hasModelReference && isScreenDesignRequest(processedMessage)) {
+        console.log('🚀 Model Driven Architecture: データモデルを基にした画面設計生成');
+        
+        // データモデル情報をプロンプトに注入
+        const enhancedPrompt = `${context}\n\n## 🎯 要求\n${processedMessage}\n\n**重要**: 上記のデータモデルを参考に、一貫性のある画面設計を行ってください。エンティティのフィールドをスプレッドシートの項目定義として正確に反映し、適切な画面レイアウトを提案してください。`;
+        
         const draft = await generateDesignDraft({
-          prompt: userMessage,
+          prompt: enhancedPrompt,
+          context: currentData
+        });
+        
+        const result = applyGeneratedDraft(draft);
+        return `🗄️ **Model Driven Architecture適用**\n\nデータモデル設計書の情報を基に画面設計を生成しました。\n\n${result}`;
+      }
+
+      // 画面設計生成要求の場合（通常）
+      if (isScreenDesignRequest(processedMessage)) {
+        const draft = await generateDesignDraft({
+          prompt: processedMessage,
           context: currentData
         });
         
@@ -352,9 +487,15 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
         return result;
       }
 
-      // 一般的なチャット応答（画面設計書コンテキスト）
+      // 一般的なチャット応答（Model Driven対応）
       const systemContext = "【重要】あなたは画面設計書のWebUIにいます。どんな質問・要求でも必ず画面設計の観点から回答してください。ERダイアグラムの話が出ても、それを画面設計の要素（画面項目、フォーム、レイアウト等）に変換して回答してください。";
-      const contextualPrompt = `${systemContext}\n\n${userMessage}`;
+      
+      let contextualPrompt = systemContext;
+      if (hasModelReference) {
+        contextualPrompt += `\n\n${context}`;
+      }
+      contextualPrompt += `\n\n${processedMessage}`;
+      
       return await generateChatResponse(contextualPrompt, currentData);
 
     } catch (error) {
@@ -441,9 +582,10 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
       onQuestionClick={handleQuestionClick}
       chatTitle="画面設計AIアシスタント"
       chatColor="#2563eb"
+      onMentionTriggered={debugMentionFunction}
     >
       <ChatMessageActions
-        message={undefined as any}
+        message={{} as any}
         onApplyProposal={handleModificationProposal}
         onRejectProposal={handleRejectProposal}
       />
