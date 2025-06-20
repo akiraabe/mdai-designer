@@ -16,7 +16,7 @@ import { useSpreadsheetOperations } from '../../hooks/useSpreadsheetOperations';
 import { DocumentHeader } from '../Header/DocumentHeader';
 import { ActionButtons } from '../Header/ActionButtons';
 import { TabNavigation } from '../Navigation/TabNavigation';
-import { ChatPanel } from '../Common/ChatPanel';
+import { ScreenChatPanel } from '../Chat/ScreenChatPanel';
 import { BackupManager } from '../Common/BackupManager';
 
 // 画面設計書専用セクション
@@ -278,21 +278,18 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
           <MessageCircle size={24} color="white" strokeWidth={2} />
         </button>
 
-        {/* チャットパネル（画面設計書専用データアクセス） */}
+        {/* チャットパネル（画面設計書専用） */}
         {isChatOpen && (
-          <ChatPanel
+          <ScreenChatPanel
             isOpen={isChatOpen}
             onClose={() => setIsChatOpen(false)}
-            documentType="screen" // 🎯 画面設計書WebUIコンテキスト
             conditionsMarkdown={conditionsMarkdown}
             supplementMarkdown={supplementMarkdown}
             spreadsheetData={spreadsheetData}
             mockupImage={mockupImage}
-            mermaidCode="" // 画面設計書では未使用
             onConditionsMarkdownUpdate={setConditionsMarkdown}
             onSupplementMarkdownUpdate={setSupplementMarkdown}
             onSpreadsheetDataUpdate={setSpreadsheetData}
-            onMermaidCodeUpdate={() => {}} // 画面設計書では未使用
             onShowBackupManager={() => setIsBackupManagerOpen(true)}
           />
         )}

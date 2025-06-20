@@ -15,7 +15,7 @@ import { useFileOperations } from '../../hooks/useFileOperations';
 import { DocumentHeader } from '../Header/DocumentHeader';
 import { ActionButtons } from '../Header/ActionButtons';
 import { TabNavigation } from '../Navigation/TabNavigation';
-import { ChatPanel } from '../Common/ChatPanel';
+import { ModelChatPanel } from '../Chat/ModelChatPanel';
 import { BackupManager } from '../Common/BackupManager';
 
 // データモデル設計書専用セクション
@@ -230,20 +230,14 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
           <MessageCircle size={24} color="white" strokeWidth={2} />
         </button>
 
-        {/* チャットパネル（データモデル設計書専用データアクセス） */}
+        {/* チャットパネル（データモデル設計書専用） */}
         {isChatOpen && (
-          <ChatPanel
+          <ModelChatPanel
             isOpen={isChatOpen}
             onClose={() => setIsChatOpen(false)}
-            documentType="model" // 🎯 データモデル設計書WebUIコンテキスト
-            conditionsMarkdown="" // データモデル設計書では未使用
             supplementMarkdown={supplementMarkdown}
-            spreadsheetData={[]} // データモデル設計書では未使用
-            mockupImage={null} // データモデル設計書では未使用
             mermaidCode={mermaidCode}
-            onConditionsMarkdownUpdate={() => {}} // データモデル設計書では未使用
             onSupplementMarkdownUpdate={setSupplementMarkdown}
-            onSpreadsheetDataUpdate={() => {}} // データモデル設計書では未使用
             onMermaidCodeUpdate={setMermaidCode}
             onShowBackupManager={() => setIsBackupManagerOpen(true)}
           />
