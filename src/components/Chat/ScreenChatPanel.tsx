@@ -64,6 +64,24 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
     currentDocumentId
   );
   const hasDataModelDocument = referenceableDocuments.some(doc => doc.type === 'model');
+  
+  console.log('🖥️ ScreenChatPanel: 参照可能な設計書', {
+    projectId: currentProjectId,
+    documentId: currentDocumentId,
+    referenceableCount: referenceableDocuments.length,
+    documents: referenceableDocuments.map(doc => ({ name: doc.name, type: doc.type })),
+    hasDataModel: hasDataModelDocument
+  });
+
+  // @メンション機能のデバッグ用関数
+  const debugMentionFunction = () => {
+    console.log('🔍 @メンション機能デバッグ:', {
+      referenceableDocuments: referenceableDocuments.length,
+      sampleDocuments: referenceableDocuments.slice(0, 3).map(doc => ({ name: doc.name, type: doc.type })),
+      functionType: typeof DocumentReferenceService.getReferenceableDocuments
+    });
+    return referenceableDocuments;
+  };
 
   // 画面設計書専用の定型質問（Model Driven対応）
   const suggestedQuestions = [
@@ -564,6 +582,7 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
       onQuestionClick={handleQuestionClick}
       chatTitle="画面設計AIアシスタント"
       chatColor="#2563eb"
+      onMentionTriggered={debugMentionFunction}
     >
       <ChatMessageActions
         message={{} as any}

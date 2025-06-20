@@ -1,10 +1,12 @@
 // src/components/Chat/BaseChatPanel.tsx
 // チャットパネルの共通基盤コンポーネント（UI・メッセージ処理）
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
 import { checkAPIKey } from '../../services/aiService';
 import type { ModificationProposal } from '../../types/aiTypes';
+import type { DocumentReference } from '../../services/documentReferenceService';
+import { MentionSuggestions } from './MentionSuggestions';
 
 export interface ChatMessage {
   id: string;
@@ -26,6 +28,9 @@ interface BaseChatPanelProps {
   chatTitle?: string;
   chatColor?: string;
   children?: React.ReactNode; // 修正提案ボタンなど、特化機能用
+  // @メンション機能用
+  mentionSuggestions?: DocumentReference[];
+  onMentionTriggered?: () => DocumentReference[];
 }
 
 export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
@@ -38,13 +43,207 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
   onQuestionClick,
   chatTitle = 'AI設計アシスタント',
   chatColor = '#3b82f6',
-  children
+  children,
+  onMentionTriggered
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  
+  // @メンション候補の状態管理
+  const [mentionSuggestions, setMentionSuggestions] = useState<DocumentReference[]>([]);
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  
+  // 最もシンプルなアプローチ：最適化なしで直接渡す
   
   // APIキーの存在確認
   const hasAPIKey = checkAPIKey();
+
+  // @メンション検知とポジション計算
+  const detectMention = useCallback((value: string, cursorPosition: number) => {
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtIndex === -1) {
+      return { hasMention: false, query: '', startIndex: -1 };
+    }
+    
+    // @マークの後にスペースや改行がない場合のみメンションとして認識
+    const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+    const hasSpaceOrNewline = /[\s\n]/.test(textAfterAt);
+    
+    if (hasSpaceOrNewline) {
+      return { hasMention: false, query: '', startIndex: -1 };
+    }
+    
+    return {
+      hasMention: true,
+      query: textAfterAt,
+      startIndex: lastAtIndex
+    };
+  }, []);
+
+  // カーソル位置から候補表示位置を計算
+  const calculateMentionPosition = useCallback(() => {
+    if (!inputRef.current) return { top: 0, left: 0 };
+    
+    const rect = inputRef.current.getBoundingClientRect();
+    
+    const positionInfo = {
+      inputRect: rect,
+      windowHeight: window.innerHeight,
+      windowWidth: window.innerWidth,
+      calculatedTop: rect.top - 220,
+      calculatedLeft: rect.left + 16
+    };
+    
+    // デバッグ完了後はAlert削除
+    // alert(`📍 位置計算結果...`);
+    
+    console.log('📍 MentionPosition calculation:', positionInfo);
+    
+    // 画面上部に強制表示するように修正
+    return {
+      top: 100, // 画面上部に固定
+      left: Math.max(50, rect.left - 100) // 左端から適度に離す
+    };
+  }, []);
+
+  // 入力変更時の@メンション処理
+  const handleInputChange = useCallback((value: string) => {
+    setInputMessage(value);
+    
+    console.log('🔍 BaseChatPanel: 入力変更', { 
+      value: value.substring(0, 50), 
+      hasOnMentionTriggered: !!onMentionTriggered,
+      mentionTriggeredType: typeof onMentionTriggered,
+      inputLength: value.length
+    });
+    
+    if (!onMentionTriggered) {
+      console.log('⚠️ BaseChatPanel: onMentionTriggered が設定されていません');
+      return;
+    }
+    
+    const cursorPosition = inputRef.current?.selectionStart || value.length;
+    const mentionResult = detectMention(value, cursorPosition);
+    
+    console.log('🎯 BaseChatPanel: メンション検知結果', {
+      ...mentionResult, 
+      cursorPosition,
+      hasAt: value.includes('@'),
+      lastChar: value[value.length - 1]
+    });
+    
+    // デバッグ完了後はAlert削除
+    // if (value.includes('@')) { alert(...); }
+    
+    if (mentionResult.hasMention) {
+      console.log('🔍 BaseChatPanel: メンション検知！候補取得中...');
+      
+      try {
+        const suggestions = onMentionTriggered();
+        console.log('📋 BaseChatPanel: 候補取得結果', { 
+          suggestionsCount: suggestions.length, 
+          suggestions: suggestions.map(s => ({ name: s.name, type: s.type }))
+        });
+        
+        const filteredSuggestions = suggestions.filter(doc => 
+          doc.name.toLowerCase().includes(mentionResult.query.toLowerCase()) ||
+          mentionResult.query === ''
+        );
+        
+        console.log('🔍 BaseChatPanel: フィルタ後の候補', { 
+          query: mentionResult.query, 
+          filteredCount: filteredSuggestions.length,
+          filtered: filteredSuggestions.map(s => ({ name: s.name, type: s.type }))
+        });
+        
+        // デバッグ完了後はAlert削除
+        // if (filteredSuggestions.length > 0) { alert(...); }
+        
+        if (filteredSuggestions.length > 0) {
+          setMentionSuggestions(filteredSuggestions);
+          setShowMentionSuggestions(true);
+          setSelectedSuggestionIndex(0);
+          setMentionStartIndex(mentionResult.startIndex);
+          setMentionPosition({ top: 100, left: Math.max(50, inputRef.current?.getBoundingClientRect().left || 100) });
+          console.log('✅ BaseChatPanel: ポップアップ表示準備完了', {
+            suggestionsCount: filteredSuggestions.length,
+            position: calculateMentionPosition()
+          });
+        } else {
+          setShowMentionSuggestions(false);
+          console.log('❌ BaseChatPanel: 候補なしでポップアップ非表示');
+        }
+      } catch (error) {
+        console.error('❌ BaseChatPanel: 候補取得エラー', error);
+        setShowMentionSuggestions(false);
+      }
+    } else {
+      setShowMentionSuggestions(false);
+      console.log('⚫ BaseChatPanel: メンション検知なし');
+    }
+  }, [onMentionTriggered, detectMention, calculateMentionPosition]);
+
+  // メンション候補選択
+  const selectMention = useCallback((suggestion: DocumentReference) => {
+    if (mentionStartIndex === -1) return;
+    
+    const beforeMention = inputMessage.substring(0, mentionStartIndex);
+    const cursorPosition = inputRef.current?.selectionStart || inputMessage.length;
+    const afterCursor = inputMessage.substring(cursorPosition);
+    
+    const newMessage = `${beforeMention}@${suggestion.name} ${afterCursor}`;
+    setInputMessage(newMessage);
+    setShowMentionSuggestions(false);
+    
+    // フォーカスを戻す
+    setTimeout(() => {
+      if (inputRef.current) {
+        const newCursorPosition = beforeMention.length + suggestion.name.length + 2;
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
+      }
+    }, 0);
+  }, [inputMessage, mentionStartIndex]);
+  
+  // シンプルなコールバック（最適化なし）
+  const handleClose = () => setShowMentionSuggestions(false);
+  const handleSelect = (suggestion: DocumentReference) => selectMention(suggestion);
+
+  // キーボードナビゲーション
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showMentionSuggestions) return;
+    
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < mentionSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : mentionSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        if (mentionSuggestions[selectedSuggestionIndex]) {
+          e.preventDefault();
+          selectMention(mentionSuggestions[selectedSuggestionIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowMentionSuggestions(false);
+        break;
+    }
+  }, [showMentionSuggestions, mentionSuggestions, selectedSuggestionIndex, selectMention]);
 
   // メッセージが追加されたら自動で下にスクロール
   useEffect(() => {
@@ -258,12 +457,14 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
         borderTop: '1px solid #e5e7eb',
         padding: '20px'
       }}>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', position: 'relative' }}>
           <textarea
+            ref={inputRef}
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              handleKeyDown(e);
+              if (e.key === 'Enter' && !e.shiftKey && !showMentionSuggestions) {
                 e.preventDefault();
                 handleSendMessage();
               }
@@ -325,6 +526,16 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
             )}
           </button>
         </div>
+        
+        {/* @メンション候補ポップアップ（シンプル版） */}
+        <MentionSuggestions
+          suggestions={mentionSuggestions}
+          isVisible={showMentionSuggestions}
+          selectedIndex={selectedSuggestionIndex}
+          onSelect={handleSelect}
+          onClose={handleClose}
+          position={{ top: 100, left: 200 }}
+        />
       </div>
     </div>
     </>

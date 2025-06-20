@@ -10,6 +10,7 @@ import type { Document, Project } from '../../types';
 import { useDocumentState } from '../../hooks/useDocumentState';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { useFileOperations } from '../../hooks/useFileOperations';
+import { useAppState } from '../../hooks/useAppState';
 
 // 共通コンポーネント
 import { DocumentHeader } from '../Header/DocumentHeader';
@@ -46,6 +47,9 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
   
   // バックアップ管理状態
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false);
+  
+  // アプリケーション状態（@メンション機能対応）
+  const { appState } = useAppState();
   
   // タブナビゲーション（データモデル設計書専用タブのみ）
   const { activeTab, setActiveTab } = useTabNavigation();
@@ -230,7 +234,7 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
           <MessageCircle size={24} color="white" strokeWidth={2} />
         </button>
 
-        {/* チャットパネル（データモデル設計書専用） */}
+        {/* チャットパネル（@メンション機能対応） */}
         {isChatOpen && (
           <ModelChatPanel
             isOpen={isChatOpen}
@@ -240,6 +244,9 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
             onSupplementMarkdownUpdate={setSupplementMarkdown}
             onMermaidCodeUpdate={setMermaidCode}
             onShowBackupManager={() => setIsBackupManagerOpen(true)}
+            appState={appState}
+            currentProjectId={project.id}
+            currentDocumentId={document.id}
           />
         )}
 
