@@ -1,4 +1,5 @@
 // 初期データ管理フック
+import type { SpreadsheetData } from '../types/spreadsheet';
 
 // 初期Markdownデータ
 export const initialConditionsMarkdown = `## 表示条件
@@ -30,7 +31,7 @@ export const initialSupplementMarkdown = `## 補足説明
 - キャッシュ機能により応答速度向上`;
 
 // 初期スプレッドシートデータ（書式情報対応）
-export const initialSpreadsheetData = [
+export const initialSpreadsheetData: SpreadsheetData[] = [
   {
     name: "項目定義",
     id: "sheet1",

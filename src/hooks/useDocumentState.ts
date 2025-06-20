@@ -4,12 +4,13 @@ import {
   initialSupplementMarkdown, 
   initialSpreadsheetData 
 } from './useInitialData';
+import type { SpreadsheetData } from '../types/spreadsheet';
 
 export const useDocumentState = () => {
   // Markdownとスプレッドシートの状態
   const [conditionsMarkdown, setConditionsMarkdown] = useState<string>(initialConditionsMarkdown);
   const [supplementMarkdown, setSupplementMarkdown] = useState<string>(initialSupplementMarkdown);
-  const [spreadsheetData, setSpreadsheetData] = useState(initialSpreadsheetData);
+  const [spreadsheetData, setSpreadsheetData] = useState<SpreadsheetData[]>(initialSpreadsheetData);
   
   // 画像状態
   const [mockupImage, setMockupImage] = useState<string | null>(null);

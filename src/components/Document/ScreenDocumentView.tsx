@@ -11,6 +11,7 @@ import { useDocumentState } from '../../hooks/useDocumentState';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { useFileOperations } from '../../hooks/useFileOperations';
 import { useSpreadsheetOperations } from '../../hooks/useSpreadsheetOperations';
+import { useAppState } from '../../hooks/useAppState';
 
 // 共通コンポーネント
 import { DocumentHeader } from '../Header/DocumentHeader';
@@ -51,6 +52,9 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
   
   // バックアップ管理状態
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false);
+  
+  // アプリケーション状態（Model Driven Architecture対応）
+  const { appState } = useAppState();
   
   // タブナビゲーション（画面設計書専用タブのみ）
   const { activeTab, setActiveTab } = useTabNavigation();
@@ -278,7 +282,7 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
           <MessageCircle size={24} color="white" strokeWidth={2} />
         </button>
 
-        {/* チャットパネル（画面設計書専用） */}
+        {/* チャットパネル（Model Driven Architecture対応） */}
         {isChatOpen && (
           <ScreenChatPanel
             isOpen={isChatOpen}
@@ -291,6 +295,9 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
             onSupplementMarkdownUpdate={setSupplementMarkdown}
             onSpreadsheetDataUpdate={setSpreadsheetData}
             onShowBackupManager={() => setIsBackupManagerOpen(true)}
+            appState={appState}
+            currentProjectId={project.id}
+            currentDocumentId={document.id}
           />
         )}
 
