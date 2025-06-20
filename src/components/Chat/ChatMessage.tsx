@@ -17,8 +17,8 @@ export const ChatMessageActions: React.FC<ChatMessageActionsProps> = ({
   onApplyProposal,
   onRejectProposal
 }) => {
-  // 修正提案の場合のみボタンを表示
-  if (message.type !== 'proposal' || !message.proposal) {
+  // 安全性チェック: messageが存在し、修正提案の場合のみボタンを表示
+  if (!message || message.type !== 'proposal' || !message.proposal) {
     return null;
   }
 

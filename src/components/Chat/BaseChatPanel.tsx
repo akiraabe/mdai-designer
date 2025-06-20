@@ -176,10 +176,8 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
               <div className="text-sm whitespace-pre-wrap">{message.content}</div>
               
               {/* 特化機能エリア（修正提案ボタンなど） */}
-              {children && React.isValidElement(children) && message.type === 'proposal' && 
+              {children && React.isValidElement(children) && 
                 React.cloneElement(children, { message } as any)}
-              {children && React.isValidElement(children) && message.type !== 'proposal' && 
-                children}
               
               <div
                 className={`text-xs mt-1 ${

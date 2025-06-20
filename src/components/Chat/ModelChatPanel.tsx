@@ -399,7 +399,7 @@ erDiagram
       chatColor="#d97706"
     >
       <ChatMessageActions
-        message={undefined as any}
+        message={{} as any}
         onApplyProposal={handleModificationProposal}
         onRejectProposal={handleRejectProposal}
       />
