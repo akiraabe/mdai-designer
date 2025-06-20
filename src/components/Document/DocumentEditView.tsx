@@ -97,6 +97,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
     return () => clearTimeout(timer);
   }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, mermaidCode, document.id, onUpdateDocument]);
 
+
   // ファイル操作フック
   const {
     handleImageUpload,
@@ -227,7 +228,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
                   onSpreadsheetChange={setSpreadsheetData}
                 />
               )}
-              {shouldShowTab(document.type || 'screen', 'models') && (
+              {shouldShowTab(document.type || 'screen', 'models') && (document.type !== 'screen') && (
                 <ModelsSection
                   mermaidCode={mermaidCode}
                   onMermaidCodeUpdate={setMermaidCode}
@@ -267,7 +268,7 @@ export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
           )}
 
           {/* データモデルタブ */}
-          {activeTab === 'models' && shouldShowTab(document.type || 'screen', 'models') && (
+          {activeTab === 'models' && shouldShowTab(document.type || 'screen', 'models') && (document.type !== 'screen') && (
             <ModelsSection
               mermaidCode={mermaidCode}
               onMermaidCodeUpdate={setMermaidCode}
