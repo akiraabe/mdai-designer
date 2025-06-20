@@ -22,8 +22,7 @@ export interface Document {
   supplement: string;      // 補足説明 (Markdown)
   spreadsheet: any;        // スプレッドシートデータ (Fortune-Sheet形式) // eslint-disable-line @typescript-eslint/no-explicit-any
   mockup: string | null;   // 画面モックアップ (Base64)
-  domainModels?: any[];    // ドメインモデル定義 // eslint-disable-line @typescript-eslint/no-explicit-any
-  modelRelationships?: any[]; // モデル関係定義 // eslint-disable-line @typescript-eslint/no-explicit-any
+  mermaidCode?: string;    // Mermaid ER図コード
   createdAt: string;      // 作成日時 (ISO文字列)
   updatedAt: string;      // 更新日時 (ISO文字列)
 }

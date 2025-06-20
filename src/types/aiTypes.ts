@@ -7,6 +7,7 @@ export interface WebUIData {
   supplementMarkdown: string;
   spreadsheetData: any[];
   mockupImage: string | null;
+  mermaidCode: string;
 }
 
 // AI生成結果
@@ -87,7 +88,7 @@ export interface ModificationProposal {
 }
 
 export interface ProposedChange {
-  target: 'conditions' | 'supplement' | 'supplementary' | 'spreadsheet' | 'mockup';
+  target: 'conditions' | 'supplement' | 'supplementary' | 'spreadsheet' | 'mockup' | 'mermaid';
   action: 'add' | 'modify' | 'delete';
   location?: string;          // 変更位置（行番号、セル位置等）
   originalContent?: string;   // 元の内容
@@ -109,7 +110,7 @@ export interface BackupData {
 
 // 差分情報
 export interface DiffResult {
-  target: 'conditions' | 'supplement' | 'spreadsheet';
+  target: 'conditions' | 'supplement' | 'spreadsheet' | 'mermaid';
   hasChanges: boolean;
   additions: string[];        // 追加された内容
   modifications: string[];    // 変更された内容

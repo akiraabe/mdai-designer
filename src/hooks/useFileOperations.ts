@@ -6,6 +6,7 @@ interface DocumentData {
   supplement: string;
   spreadsheet: any;
   mockup: string | null;
+  mermaidCode?: string;
   timestamp: string;
 }
 
@@ -14,10 +15,12 @@ interface UseFileOperationsProps {
   supplementMarkdown: string;
   spreadsheetData: any[];
   mockupImage: string | null;
+  mermaidCode: string;
   setConditionsMarkdown: (value: string) => void;
   setSupplementMarkdown: (value: string) => void;
   setSpreadsheetData: (data: any[]) => void;
   setMockupImage: (image: string | null) => void;
+  setMermaidCode: (code: string) => void;
 }
 
 export const useFileOperations = ({
@@ -25,10 +28,12 @@ export const useFileOperations = ({
   supplementMarkdown,
   spreadsheetData,
   mockupImage,
+  mermaidCode,
   setConditionsMarkdown,
   setSupplementMarkdown,
   setSpreadsheetData,
   setMockupImage,
+  setMermaidCode,
 }: UseFileOperationsProps) => {
   
   // 画像アップロード処理
@@ -56,6 +61,7 @@ export const useFileOperations = ({
       supplement: supplementMarkdown,
       spreadsheet: spreadsheetData,
       mockup: mockupImage,
+      mermaidCode: mermaidCode,
       timestamp: new Date().toISOString()
     };
     
@@ -66,7 +72,7 @@ export const useFileOperations = ({
     a.download = 'design-document.json';
     a.click();
     URL.revokeObjectURL(url);
-  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage]);
+  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, mermaidCode]);
 
   // インポート処理（元のhandleLoadをそのままコピー）
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,6 +244,7 @@ export const useFileOperations = ({
             setConditionsMarkdown(docData.conditions || '');
             setSupplementMarkdown(docData.supplement || '');
             setMockupImage(docData.mockup || null);
+            setMermaidCode(docData.mermaidCode || '');
             
             console.log('📂 Reactステート更新実行');
             
@@ -263,7 +270,7 @@ export const useFileOperations = ({
     }
     // ファイル選択をリセット
     e.target.value = '';
-  }, [setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage]);
+  }, [setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setMermaidCode]);
 
   return {
     handleImageUpload,
