@@ -357,6 +357,230 @@ const getLLMResponse = async (userMessage: string, context: WebUIData) => {
 
 **結論**: CopilotKitを活用した双方向AI統合により、次世代の設計書作成支援システムの基盤を確立。WebUIとAIの境界を超えた、真のコラボレーション環境を実現。
 
+## 画面設計・データモデル設計の完全分離実装（2025年6月実装） 🎯
+
+### 📋 **実装概要**
+**ビッグスイッチパターン**を採用し、画面設計書とデータモデル設計書の機能を完全に分離。散在していた条件分岐を一箇所に集約し、それぞれ専用のViewコンポーネントに完全委譲する革新的なアーキテクチャを実現。
+
+### ✅ **実装済み機能**
+
+#### **1. ビッグスイッチ・ルーターパターン**
+
+**DocumentEditView.tsx（完全リファクタリング）**
+```typescript
+// 🎯 ビッグスイッチ: ドキュメントタイプによる完全分離
+export const DocumentEditView: React.FC<DocumentEditViewProps> = ({
+  document, project, onUpdateDocument, onGoBack
+}) => {
+  switch (document.type) {
+    case 'screen':
+      return <ScreenDocumentView {...props} />;
+    case 'model':
+      return <ModelDocumentView {...props} />;
+    case 'api':
+      return <ScreenDocumentView {...props} />; // 代替
+    case 'database':
+      return <ModelDocumentView {...props} />; // 代替
+    default:
+      return <ScreenDocumentView {...props} />; // フォールバック
+  }
+};
+```
+
+**革新点:**
+- **単一責任**: ルーティングのみに特化（145行→91行に削減）
+- **完全委譲**: 各専用Viewに100%処理を移譲
+- **拡張性**: 新しいドキュメントタイプの追加が容易
+- **保守性**: 条件分岐が散在せず一箇所に集約
+
+#### **2. 画面設計書専用View（ScreenDocumentView）**
+
+**専用機能:**
+- **表示条件**: Markdown編集（conditionsMarkdown）
+- **画面イメージ**: モックアップアップロード（mockupImage）
+- **項目定義**: スプレッドシート編集（spreadsheetData）
+- **補足説明**: Markdown編集（supplementMarkdown）
+
+**特徴:**
+- **青系統UI**: 画面設計に特化したカラーテーマ
+- **4タブ構成**: all/conditions/mockup/definitions
+- **画面設計専用フック**: useDocumentStateの画面設計フィールドのみ使用
+
+```typescript
+// 画面設計書専用データ管理
+const {
+  conditionsMarkdown, supplementMarkdown, 
+  spreadsheetData, mockupImage,
+  setConditionsMarkdown, setSupplementMarkdown,
+  setSpreadsheetData, setMockupImage
+} = useDocumentState();
+```
+
+#### **3. データモデル設計書専用View（ModelDocumentView）**
+
+**専用機能:**
+- **データモデル**: Mermaid ER図編集（mermaidCode）
+- **補足説明**: Markdown編集（supplementMarkdown）
+
+**特徴:**
+- **オレンジ系統UI**: データモデル設計に特化したカラーテーマ
+- **2タブ構成**: all/models（modelsタブでER図編集）
+- **データモデル専用フック**: useDocumentStateのモデル設計フィールドのみ使用
+
+```typescript
+// データモデル設計書専用データ管理
+const {
+  supplementMarkdown, mermaidCode,
+  setSupplementMarkdown, setMermaidCode
+} = useDocumentState();
+```
+
+### 🎯 **技術的革新点**
+
+#### **1. 責任分離の徹底**
+
+**Before（問題状況）**
+```typescript
+// 散在した条件分岐
+if (document.type === 'screen') {
+  // 画面設計処理がここに...
+} else if (document.type === 'model') {
+  // モデル設計処理がここに...
+}
+// 各所にif文が散在し、保守性が悪化
+```
+
+**After（解決後）**
+```typescript
+// ビッグスイッチによる完全分離
+switch (document.type) {
+  case 'screen': return <ScreenDocumentView />;
+  case 'model': return <ModelDocumentView />;
+}
+// 一箇所でルーティング、各専用Viewで独立処理
+```
+
+#### **2. データフロー設計の最適化**
+
+**画面設計書データフロー:**
+```
+conditionsMarkdown → ConditionsSection
+spreadsheetData → DefinitionsSection  
+mockupImage → MockupSection
+supplementMarkdown → SupplementSection
+```
+
+**データモデル設計書データフロー:**
+```
+mermaidCode → ModelsSection
+supplementMarkdown → SupplementSection
+```
+
+#### **3. UI/UXの専門化**
+
+**視覚的区別:**
+- **画面設計書**: 青系統カラー、画面アイコン、4セクション構成
+- **データモデル設計書**: オレンジ系統カラー、データベースアイコン、2セクション構成
+
+**機能特化:**
+- **画面設計書**: スプレッドシート、画像アップロード、条件記述
+- **データモデル設計書**: ER図エディタ、リレーション定義
+
+### 🚀 **解決した課題**
+
+#### **Before（問題状況）**
+- ❌ 画面設計UIにデータモデル機能が混入
+- ❌ 条件分岐が各所に散在し保守困難
+- ❌ 機能追加時の影響範囲が予測不可能
+- ❌ ドキュメントタイプ別の専門性が不足
+
+#### **After（解決後）**
+- ✅ 完全に独立した専用View
+- ✅ 一箇所でのルーティング制御
+- ✅ 明確な責任境界による安全な機能追加
+- ✅ 各ドキュメントタイプに最適化されたUX
+
+### 📊 **アーキテクチャの価値**
+
+#### **1. 開発効率の向上**
+- **明確な分離**: どこに何の機能があるか即座に理解可能
+- **並行開発**: 画面設計とモデル設計を独立して開発可能
+- **影響範囲限定**: 変更が他のタイプに影響しない
+
+#### **2. 保守性の劇的改善**
+- **単一責任原則**: 各Viewが一つのドキュメントタイプのみ担当
+- **予測可能性**: 変更箇所と影響範囲が明確
+- **テスタビリティ**: 独立したコンポーネントによる単体テスト容易性
+
+#### **3. 拡張性の確保**
+- **新タイプ追加**: switchに1ケース追加するだけ
+- **専門機能**: 各タイプ固有の高度な機能を安全に追加可能
+- **カスタマイズ**: タイプ別の詳細なUI/UX調整
+
+### 🎉 **達成した成果**
+
+**本実装により、統合設計書システムは「単一の汎用エディタ」から「ドキュメントタイプ別に高度に専門化されたマルチエディタシステム」へと進化。ビッグスイッチパターンによる革新的なアーキテクチャ設計により、スケーラビリティと保守性を両立した次世代の設計支援プラットフォームを実現。**
+
+### 🔧 **実装ファイル構成**
+
+#### **ルーター**
+- `DocumentEditView.tsx`: ビッグスイッチによる完全分離ルーター
+
+#### **専用View**
+- `ScreenDocumentView.tsx`: 画面設計書専用View（青系統、4セクション）
+- `ModelDocumentView.tsx`: データモデル設計書専用View（オレンジ系統、2セクション）
+
+#### **共通コンポーネント（両Viewで使用）**
+- `SupplementSection.tsx`: 補足説明セクション
+- `MarkdownEditor.tsx`: Markdown編集コンポーネント
+
+#### **専用コンポーネント**
+- `ConditionsSection.tsx`: 画面設計書専用（表示条件）
+- `MockupSection.tsx`: 画面設計書専用（画面イメージ）
+- `DefinitionsSection.tsx`: 画面設計書専用（項目定義）
+- `ModelsSection.tsx`: データモデル設計書専用（ER図）
+
+### 🔍 **技術仕様詳細**
+
+```typescript
+// ビッグスイッチパターンの実装
+export const DocumentEditView: React.FC<DocumentEditViewProps> = (props) => {
+  const { document } = props;
+  
+  switch (document.type) {
+    case 'screen':
+      console.log('🖥️ 画面設計書専用Viewにルーティング');
+      return <ScreenDocumentView {...props} />;
+      
+    case 'model':
+      console.log('🗄️ データモデル設計書専用Viewにルーティング');
+      return <ModelDocumentView {...props} />;
+      
+    default:
+      console.warn('⚠️ 不明なドキュメントタイプ、画面設計書Viewで代替');
+      return <ScreenDocumentView {...props} />;
+  }
+};
+
+// 画面設計書専用データ管理
+interface ScreenDocumentData {
+  conditionsMarkdown: string;
+  supplementMarkdown: string;
+  spreadsheetData: any[];
+  mockupImage: string | null;
+}
+
+// データモデル設計書専用データ管理
+interface ModelDocumentData {
+  supplementMarkdown: string;
+  mermaidCode: string;
+}
+```
+
+---
+
+**結論**: ビッグスイッチパターンによる完全分離により、画面設計とデータモデル設計の混在問題を根本的に解決。各ドキュメントタイプに特化した専門的なUXと、保守性・拡張性に優れたアーキテクチャを両立した革新的なシステム設計を実現。
+
 ## SpreadsheetEditor編集モード切り替え機能（2025年1月実装） 🎯
 
 ### 📋 **実装概要**

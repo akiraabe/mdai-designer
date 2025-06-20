@@ -17,6 +17,8 @@ interface ChatMessage {
 interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  // ドキュメントタイプ（重要：WebUIコンテキスト識別用）
+  documentType: 'screen' | 'model';
   // ページデータアクセス用
   conditionsMarkdown: string;
   supplementMarkdown: string;
@@ -34,7 +36,8 @@ interface ChatPanelProps {
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ 
   isOpen, 
-  onClose, 
+  onClose,
+  documentType,
   conditionsMarkdown, 
   supplementMarkdown, 
   spreadsheetData, 
@@ -485,7 +488,13 @@ erDiagram
       }
       
       // 一般的なチャット応答
-      return await generateChatResponse(userMessage, currentData);
+      // 🎯 WebUIコンテキストを明示的に指定
+      const systemContext = documentType === 'screen' 
+        ? "【重要】あなたは画面設計書のWebUIにいます。どんな質問・要求でも必ず画面設計の観点から回答してください。ERダイアグラムの話が出ても、それを画面設計の要素（画面項目、フォーム、レイアウト等）に変換して回答してください。"
+        : "【重要】あなたはデータモデル設計書のWebUIにいます。どんな質問・要求でも必ずデータモデル設計の観点から回答してください。画面の話が出ても、それをデータモデル（エンティティ、リレーション、ER図等）の観点で回答してください。";
+      
+      const contextualPrompt = `${systemContext}\n\n${userMessage}`;
+      return await generateChatResponse(contextualPrompt, currentData);
       
     } catch (error) {
       console.error('AI応答エラー:', error);
