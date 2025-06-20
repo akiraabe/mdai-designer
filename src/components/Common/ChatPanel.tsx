@@ -238,20 +238,36 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     return modificationKeywords.some(keyword => lowerMessage.includes(keyword));
   };
 
-  // 新規作成要求の判定
+  // 新規作成要求の判定（documentType依存）
   const isCreationRequest = (message: string): boolean => {
     const lowerMessage = message.toLowerCase();
-    const creationKeywords = [
-      'を作成して', 'を作って', 'データモデルを', 'er図を', 
-      'エンティティを作', 'モデルを作', '新しく', 'から作成',
-      'ダイアグラムを', 'テーブル設計', 'データ設計'
+    
+    // 共通の作成キーワード
+    const commonKeywords = [
+      'を作成して', 'を作って', 'を作', '新しく', 'から作成'
     ];
-    return creationKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    // documentType別の専用キーワード
+    const typeSpecificKeywords = documentType === 'model' 
+      ? ['データモデルを', 'er図を', 'エンティティを作', 'モデルを作', 'ダイアグラムを', 'テーブル設計', 'データ設計']
+      : ['画面を', 'フォームを', '項目を', '画面設計', 'UI設計', 'レイアウト'];
+    
+    const allKeywords = [...commonKeywords, ...typeSpecificKeywords];
+    return allKeywords.some(keyword => lowerMessage.includes(keyword));
   };
 
-  // データが空かどうかの判定
+  // データが空かどうかの判定（documentType依存）
   const isEmpty = (data: WebUIData): boolean => {
-    return (!data.mermaidCode || data.mermaidCode.trim().length < 10);
+    if (documentType === 'model') {
+      // データモデル設計書：mermaidCodeが空かどうか
+      return (!data.mermaidCode || data.mermaidCode.trim().length < 10);
+    } else {
+      // 画面設計書：conditions、spreadsheet、mockupのいずれかがあれば非空
+      const hasConditions = data.conditionsMarkdown && data.conditionsMarkdown.trim().length > 0;
+      const hasSpreadsheet = data.spreadsheetData && data.spreadsheetData.length > 0 && data.spreadsheetData[0]?.celldata?.length > 0;
+      const hasMockup = data.mockupImage && data.mockupImage.length > 0;
+      return !(hasConditions || hasSpreadsheet || hasMockup);
+    }
   };
 
   // 現在のページデータを解析する関数
@@ -382,12 +398,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     };
     
     console.log('🔍 ChatPanel currentData:', {
+      documentType, // 🎯 WebUIコンテキスト
       conditionsLength: conditionsMarkdown?.length || 0,
       supplementLength: supplementMarkdown?.length || 0,
       spreadsheetCells: spreadsheetData?.[0]?.celldata?.length || 0,
       hasImage: !!mockupImage,
       mermaidLength: mermaidCode?.length || 0,
-      mermaidPreview: mermaidCode?.substring(0, 100) || '（空）'
+      mermaidPreview: mermaidCode?.substring(0, 100) || '（空）',
+      isEmpty: isEmpty(currentData), // データ空判定結果
+      isCreationRequest: isCreationRequest(userMessage) // 作成要求判定結果
     });
     
     try {
@@ -395,10 +414,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       if (isCreationRequest(userMessage) && isEmpty(currentData)) {
         console.log('🆕 新規作成要求として認識:', userMessage);
         
-        // データモデル・ER図関連の新規作成の場合、mermaid生成として処理
-        if (userMessage.toLowerCase().includes('データモデル') || 
+        // 🎯 WebUIコンテキストによる分岐：データモデル設計書の場合のみmermaid生成
+        if (documentType === 'model' && (
+            userMessage.toLowerCase().includes('データモデル') || 
             userMessage.toLowerCase().includes('er図') || 
-            userMessage.toLowerCase().includes('エンティティ')) {
+            userMessage.toLowerCase().includes('エンティティ'))) {
           
           // mermaid専用の生成プロンプトを作成
           const mermaidPrompt = `
