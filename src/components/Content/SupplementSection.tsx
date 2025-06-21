@@ -26,6 +26,7 @@ export const SupplementSection: React.FC<SupplementSectionProps> = ({
           onSupplementChange(newValue);
         }}
         placeholder="補足説明を入力してください..."
+        testId="supplement-markdown-editor"
       />
     </MarkdownSection>
   );

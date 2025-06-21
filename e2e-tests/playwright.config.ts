@@ -4,8 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright設定ファイル - 設計書エディタE2Eテスト
  */
 export default defineConfig({
-  // テストディレクトリ
-  testDir: './tests',
+  // テストディレクトリ（新しい構造に更新）
+  testDir: './current',
   
   // 並列実行を無効化（リソース軽減）
   fullyParallel: false,

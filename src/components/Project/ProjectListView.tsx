@@ -204,6 +204,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                   <div 
                     className="p-6 cursor-pointer"
                     onClick={() => onSelectProject(project.id)}
+                    data-testid={`project-card-${project.id}`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center">
@@ -252,6 +253,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       }}
                       className="flex items-center px-3 py-1 text-sm text-white bg-blue-500 border border-blue-600 hover:bg-blue-600 rounded font-bold"
                       style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
+                      data-testid={`project-edit-${project.id}`}
                     >
                       <Edit2 className="w-4 h-4 mr-1" />
                       編集
@@ -263,6 +265,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       }}
                       className="flex items-center px-3 py-1 text-sm text-white bg-red-500 border border-red-600 hover:bg-red-600 rounded font-bold"
                       style={{ backgroundColor: '#ef4444', color: '#ffffff', fontWeight: 'bold' }}
+                      data-testid={`project-delete-${project.id}`}
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       削除

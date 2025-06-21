@@ -23,6 +23,7 @@ export const ConditionsSection: React.FC<ConditionsSectionProps> = ({
         <MarkdownEditor
           value={conditionsMarkdown}
           onChange={onConditionsChange}
+          testId="conditions-markdown-editor"
         />
       </div>
     </MarkdownSection>
