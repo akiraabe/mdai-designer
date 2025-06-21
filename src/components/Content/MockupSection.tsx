@@ -7,13 +7,54 @@ import { aiService } from '../../services/aiService';
 interface MockupSectionProps {
   mockupImage: string | null;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  conditionsMarkdown?: string;
+  spreadsheetData?: any[];
 }
 
 const LOCAL_STORAGE_KEY = 'ai-mockup-html';
 
+// 項目定義（spreadsheetData）をMarkdownテーブル形式に変換
+function spreadsheetToMarkdownTable(spreadsheetData: any[]): string {
+  if (!spreadsheetData || spreadsheetData.length === 0) return '（項目定義なし）';
+
+  // 1シート目のみ対象
+  const sheet = spreadsheetData[0];
+  const celldata = sheet.celldata || [];
+  if (!celldata.length) return '（項目定義なし）';
+
+  // 行列の最大値を取得
+  const maxRow = Math.max(...celldata.map((cell: any) => cell.r));
+  const maxCol = Math.max(...celldata.map((cell: any) => cell.c));
+
+  // 2次元配列に変換
+  const table: string[][] = [];
+  for (let r = 0; r <= maxRow; r++) {
+    table[r] = [];
+    for (let c = 0; c <= maxCol; c++) {
+      const cell = celldata.find((cell: any) => cell.r === r && cell.c === c);
+      table[r][c] = cell ? (cell.v?.v || cell.v || "") : "";
+    }
+  }
+
+  // Markdownテーブル文字列生成
+  let md = '';
+  if (table.length > 0) {
+    // ヘッダー
+    md += '| ' + table[0].join(' | ') + ' |\n';
+    md += '| ' + table[0].map(() => '---').join(' | ') + ' |\n';
+    // データ
+    for (let r = 1; r < table.length; r++) {
+      md += '| ' + table[r].join(' | ') + ' |\n';
+    }
+  }
+  return md || '（項目定義なし）';
+}
+
 export const MockupSection: React.FC<MockupSectionProps> = ({
   mockupImage,
   onImageUpload,
+  conditionsMarkdown = "",
+  spreadsheetData = [],
 }) => {
   // AI生成HTML+CSS
   const [aiHtml, setAiHtml] = useState<string>('');
@@ -36,17 +77,25 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
   const handleGenerateAiMockup = useCallback(async () => {
     setIsGenerating(true);
     try {
-      // プロンプト例（今後カスタマイズ可）
-      const prompt = "ユーザー管理画面のHTML+CSSをシンプルに生成してください。フォームやテーブル、ボタンを含めてください。";
-      // contextは空でOK（画面イメージのみ生成用途）
+      // 項目定義をMarkdownテーブルに変換
+      const tableMarkdown = spreadsheetToMarkdownTable(spreadsheetData);
+
+      // プロンプトを要件・項目定義から動的生成
+      const prompt = `
+以下の要件（Markdown）と項目定義（Markdownテーブル）に基づいて、シンプルなHTML+CSSの画面イメージを生成してください。
+# 要件
+${conditionsMarkdown || "（要件なし）"}
+
+# 項目定義
+${tableMarkdown}
+      `;
       const context = {
-        conditionsMarkdown: "",
+        conditionsMarkdown,
         supplementMarkdown: "",
-        spreadsheetData: [],
+        spreadsheetData,
         mockupImage: null,
         mermaidCode: ""
       };
-      // OpenAI/BEDROCK等でAI呼び出し
       const html = await aiService.generateChatResponse(prompt, context);
       setAiHtml(html);
     } catch (e) {
@@ -88,7 +137,7 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
       setAiHtml(dummyHtml);
     }
     setIsGenerating(false);
-  }, []);
+  }, [conditionsMarkdown, spreadsheetData]);
 
   return (
     <MarkdownSection title="画面イメージ" icon={Image}>

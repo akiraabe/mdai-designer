@@ -210,6 +210,8 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
               <MockupSection
                 mockupImage={mockupImage}
                 onImageUpload={handleImageUpload}
+                conditionsMarkdown={conditionsMarkdown}
+                spreadsheetData={spreadsheetData}
               />
               <DefinitionsSection
                 spreadsheetData={spreadsheetData}
@@ -235,6 +237,8 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
             <MockupSection
               mockupImage={mockupImage}
               onImageUpload={handleImageUpload}
+              conditionsMarkdown={conditionsMarkdown}
+              spreadsheetData={spreadsheetData}
             />
           )}
 
