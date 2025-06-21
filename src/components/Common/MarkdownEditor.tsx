@@ -7,18 +7,20 @@ interface MarkdownEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  testId?: string;
 }
 
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = React.memo(({ 
   value, 
   onChange,
   // @ts-ignore - placeholderは将来の拡張用に定義
-  placeholder = ''
+  placeholder = '',
+  testId = 'markdown-editor'
 }) => {
   return (
-    <div data-color-mode="light" data-testid="markdown-editor-container">
+    <div data-color-mode="light" data-testid={`${testId}-container`}>
       <MDEditor
-        data-testid="markdown-editor"
+        data-testid={testId}
         value={value}
         onChange={(val) => onChange(val || '')}
         height={400}

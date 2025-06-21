@@ -268,6 +268,7 @@ export const MermaidEditor: React.FC<MermaidEditorProps> = ({
   return (
     <div
       ref={containerRef}
+      data-testid="mermaid-editor"
       style={{
         border: '1px solid #e5e7eb',
         borderRadius: '8px',

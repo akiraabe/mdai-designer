@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "main": "index.js",
   "directories": {
-    "test": "tests"
+    "test": "current"
   },
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
-    "report": "playwright show-report"
+    "test:legacy": "playwright test ./legacy/tests --config playwright.config.legacy.ts",
+    "report": "playwright show-report",
+    "test:core": "playwright test ./current",
+    "test:ai": "echo '⚠️ AI機能テストは手動実行のみ対応（コスト・CI制約のため）'"
   },
   "keywords": [],
   "author": "",
