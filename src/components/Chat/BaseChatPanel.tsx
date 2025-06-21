@@ -92,24 +92,30 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
     
     const rect = inputRef.current.getBoundingClientRect();
     
-    const positionInfo = {
+    // デバッグ用: 実際の計算値をコンソールに出力
+    console.log('📍 MentionPosition calculation:', {
       inputRect: rect,
       windowHeight: window.innerHeight,
       windowWidth: window.innerWidth,
-      calculatedTop: rect.top - 220,
-      calculatedLeft: rect.left + 16
+      rectTop: rect.top,
+      rectBottom: rect.bottom,
+      rectLeft: rect.left,
+      rectRight: rect.right
+    });
+    
+    // 入力欄の位置に基づいた相対計算
+    // 目標: 入力欄の約170px上、左端から100px付近
+    const offsetFromInput = 170; // 入力欄からの上方向オフセット
+    const leftPosition = 100;    // 画面左端からの固定距離
+    
+    const finalPosition = {
+      top: rect.top - offsetFromInput, // 入力欄より170px上
+      left: leftPosition // 左端から100px固定（ChatPanelの見やすい位置）
     };
     
-    // デバッグ完了後はAlert削除
-    // alert(`📍 位置計算結果...`);
+    console.log('📍 Final position:', finalPosition);
     
-    console.log('📍 MentionPosition calculation:', positionInfo);
-    
-    // 画面上部に強制表示するように修正
-    return {
-      top: 100, // 画面上部に固定
-      left: Math.max(50, rect.left - 100) // 左端から適度に離す
-    };
+    return finalPosition;
   }, []);
 
   // 入力変更時の@メンション処理
@@ -534,7 +540,7 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
           selectedIndex={selectedSuggestionIndex}
           onSelect={handleSelect}
           onClose={handleClose}
-          position={{ top: 100, left: 200 }}
+          position={calculateMentionPosition()}
         />
       </div>
     </div>

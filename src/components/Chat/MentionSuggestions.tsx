@@ -126,11 +126,11 @@ export const MentionSuggestions: React.FC<MentionSuggestionsProps> = ({
         position: 'absolute',
         top: position.top,
         left: position.left,
-        backgroundColor: '#ffff00', // 黄色背景で超目立つように
-        border: '5px solid #ff0000', // さらに太い赤枠
+        backgroundColor: 'white', // 白背景
+        border: '1px solid #e5e7eb', // グレーの細枠
         borderRadius: '8px',
-        boxShadow: '0 10px 25px rgba(255, 0, 0, 0.5)', // 赤い影
-        zIndex: 99999, // より高いz-indexに変更
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', // 自然な影
+        zIndex: 1000, // 適切なz-index
         maxHeight: '200px',
         overflowY: 'auto',
         minWidth: '300px',
