@@ -89,11 +89,41 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     // Workbook APIでデータ更新（両モードで実行）
     if (workbookRef.current && validData && validData.length > 0) {
       console.log('📊 Workbook APIでデータ直接更新実行');
+      
+      // Fortune-Sheetの利用可能なAPIメソッドを調査
+      console.log('🔍 Workbook利用可能メソッド:', Object.getOwnPropertyNames(workbookRef.current));
+      console.log('🔍 Workbookプロトタイプメソッド:', Object.getOwnPropertyNames(Object.getPrototypeOf(workbookRef.current)));
+      
       try {
-        workbookRef.current.setData(validData);
+        // 複数のAPIメソッドを試行
+        if (typeof workbookRef.current.setData === 'function') {
+          console.log('🎯 setDataメソッド使用');
+          workbookRef.current.setData(validData);
+        } else if (typeof workbookRef.current.loadData === 'function') {
+          console.log('🎯 loadDataメソッド使用');
+          workbookRef.current.loadData(validData);
+        } else if (typeof workbookRef.current.refreshData === 'function') {
+          console.log('🎯 refreshDataメソッド使用');
+          workbookRef.current.refreshData(validData);
+        } else if (typeof workbookRef.current.setOptions === 'function') {
+          console.log('🎯 setOptionsメソッド使用');
+          workbookRef.current.setOptions({data: validData});
+        } else if (typeof workbookRef.current.create === 'function') {
+          console.log('🎯 createメソッド使用');
+          workbookRef.current.create({data: validData});
+        } else {
+          console.warn('⚠️ 利用可能なデータ更新メソッドが見つかりません');
+          console.log('📋 利用可能メソッド一覧:', 
+            Object.getOwnPropertyNames(workbookRef.current).filter(name => typeof workbookRef.current[name] === 'function')
+          );
+        }
         console.log('✅ Workbook APIでデータ更新成功');
+        
       } catch (error) {
         console.warn('⚠️ Workbook API更新失敗:', error);
+        console.log('🔄 プロパティ経由での更新をフォールバック実行');
+        // フォールバック：プロパティによる強制再マウント
+        setForceImportUpdate(prev => prev + 1);
       }
     }
   }, [data, validData]);
@@ -156,7 +186,7 @@ export const SpreadsheetEditor: React.FC<SpreadsheetEditorProps> = ({
     setIsResizing(false);
     
     // リサイズ完了後にWorkbookを強制再マウント
-    console.log('🔄 リサイズ完了：Workbook強制再マウント実行');
+    console.log('� リサイズ完了：Workbook強制再マウント実行');
     setForceResizeUpdate(true);
     setResizeKey(prev => prev + 1);
     
