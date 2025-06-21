@@ -1,12 +1,13 @@
 // src/components/Content/MockupSection.tsx
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Image, Bot } from 'lucide-react';
+import { Upload, Image, Bot, X } from 'lucide-react';
 import { MarkdownSection } from '../Common/MarkdownSection';
 import { aiService } from '../../services/aiService';
 
 interface MockupSectionProps {
   mockupImage: string | null;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onImageDelete?: () => void;
   conditionsMarkdown?: string;
   spreadsheetData?: any[];
 }
@@ -53,6 +54,7 @@ function spreadsheetToMarkdownTable(spreadsheetData: any[]): string {
 export const MockupSection: React.FC<MockupSectionProps> = ({
   mockupImage,
   onImageUpload,
+  onImageDelete,
   conditionsMarkdown = "",
   spreadsheetData = [],
 }) => {
@@ -175,12 +177,48 @@ ${tableMarkdown}
 
         {/* 1. 画像アップロード表示エリア（順序修正）*/}
         {mockupImage ? (
-          <div className="border rounded-lg overflow-hidden">
-            <img 
-              src={mockupImage} 
-              alt="画面モックアップ" 
-              className="w-full h-auto max-h-80 object-contain"
-            />
+          <div className="space-y-2">
+            {/* 画像表示 */}
+            <div className="border rounded-lg overflow-hidden">
+              <img 
+                src={mockupImage} 
+                alt="画面モックアップ" 
+                className="w-full h-auto max-h-80 object-contain"
+              />
+            </div>
+            {/* 削除ボタン - 普通のスタイル */}
+            {onImageDelete && (
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginTop: '8px'
+              }}>
+                <button
+                  onClick={onImageDelete}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    padding: '6px 12px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                  title="画像を削除"
+                >
+                  <X style={{ width: '14px', height: '14px' }} />
+                  画像削除
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
