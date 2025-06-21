@@ -202,7 +202,18 @@ export class ModernTestHelpers {
     await expect(documentCard).toBeVisible();
     await documentCard.click();
     
-    await this.page.waitForTimeout(2000);
+    // 設計書編集画面への遷移を確実に待機
+    await this.page.waitForTimeout(3000);
+    
+    // タブが表示されるまで待機（画面設計書か確認）
+    const isScreenDocument = await this.page.locator('button:has-text("表示条件")').isVisible().catch(() => false);
+    const isModelDocument = await this.page.locator('button:has-text("データモデル")').isVisible().catch(() => false);
+    
+    if (!isScreenDocument && !isModelDocument) {
+      console.log('⚠️ 設計書タブが見つかりません - さらに待機');
+      await this.page.waitForTimeout(2000);
+    }
+    
     console.log(`📄 設計書選択: ${documentName}`);
   }
 
@@ -295,12 +306,43 @@ export class ModernTestHelpers {
    * タブ切り替え
    */
   async switchTab(tabName: string): Promise<void> {
-    const tab = this.page.locator(`button:has-text("${tabName}")`);
-    await expect(tab).toBeVisible();
-    await tab.click();
+    // タブが表示されるまで最大10秒待機
+    let tabFound = false;
+    let attempts = 0;
+    const maxAttempts = 10;
     
-    await this.page.waitForTimeout(500);
-    console.log(`🔄 タブ切り替え: ${tabName}`);
+    while (!tabFound && attempts < maxAttempts) {
+      const tab = this.page.locator(`button:has-text("${tabName}")`);
+      if (await tab.isVisible().catch(() => false)) {
+        await tab.click();
+        await this.page.waitForTimeout(500);
+        console.log(`🔄 タブ切り替え: ${tabName}`);
+        return;
+      }
+      
+      attempts++;
+      console.log(`⏳ タブ待機中 (${attempts}/${maxAttempts}): ${tabName}`);
+      await this.page.waitForTimeout(1000);
+    }
+    
+    // 最終的にタブが見つからない場合はデバッグ情報を出力
+    console.log(`❌ タブが見つかりませんでした: ${tabName}`);
+    await this.takeScreenshot(`debug-missing-tab-${tabName}`);
+    
+    // 現在表示されているタブを確認
+    const allButtons = await this.page.locator('button').all();
+    const buttonTexts = await Promise.all(
+      allButtons.map(async (btn) => {
+        try {
+          return await btn.textContent();
+        } catch {
+          return '[読み取り不可]';
+        }
+      })
+    );
+    console.log('📋 現在表示されているボタン:', buttonTexts.filter(text => text?.includes('タブ') || text?.includes('条件') || text?.includes('モデル')));
+    
+    throw new Error(`タブ「${tabName}」が見つかりませんでした`);
   }
 
   /**
