@@ -16,6 +16,7 @@ interface DocumentEditViewProps {
     supplement?: string;
     spreadsheet?: any;
     mockup?: string | null;
+    aiGeneratedImage?: string | null;
     mermaidCode?: string;
   }) => void;
   onGoBack: () => void;

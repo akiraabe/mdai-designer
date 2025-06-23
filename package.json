@@ -1,11 +1,19 @@
 {
-  "name": "mdai-designer", 
+  "name": "mdai-designer",
   "private": false,
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
   "description": "AI-powered Model Driven Architecture design document editor supporting screen design, data modeling, and project management",
-  "keywords": ["design", "documentation", "AI", "MDA", "React", "TypeScript", "Mermaid"],
+  "keywords": [
+    "design",
+    "documentation",
+    "AI",
+    "MDA",
+    "React",
+    "TypeScript",
+    "Mermaid"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/akiraabe/mdai-designer.git"
@@ -27,7 +35,11 @@
     "@copilotkit/react-core": "^1.9.0",
     "@copilotkit/react-ui": "^1.9.0",
     "@fortune-sheet/react": "^1.0.2",
+    "@types/html2canvas": "^0.5.35",
+    "@types/jszip": "^3.4.0",
     "@uiw/react-md-editor": "^4.0.7",
+    "html2canvas": "^1.4.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.514.0",
     "mermaid": "^11.6.0",
     "openai": "^5.5.0",

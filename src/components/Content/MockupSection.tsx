@@ -1,8 +1,9 @@
 // src/components/Content/MockupSection.tsx
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Image, Bot, X } from 'lucide-react';
+import { Upload, Image, Bot, X, Camera } from 'lucide-react';
 import { MarkdownSection } from '../Common/MarkdownSection';
 import { aiService } from '../../services/aiService';
+import { convertAiMockupToImage } from '../../utils/htmlToImage';
 
 interface MockupSectionProps {
   mockupImage: string | null;
@@ -10,6 +11,8 @@ interface MockupSectionProps {
   onImageDelete?: () => void;
   conditionsMarkdown?: string;
   spreadsheetData?: any[];
+  aiGeneratedImage?: string | null; // AI生成画像（新規追加）
+  onAiImageGenerated?: (imageBase64: string) => void; // AI画像生成時のコールバック
 }
 
 const LOCAL_STORAGE_KEY = 'ai-mockup-html';
@@ -57,10 +60,13 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
   onImageDelete,
   conditionsMarkdown = "",
   spreadsheetData = [],
+  aiGeneratedImage,
+  onAiImageGenerated,
 }) => {
   // AI生成HTML+CSS
   const [aiHtml, setAiHtml] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // LocalStorageから初期値読込
   useEffect(() => {
@@ -85,6 +91,12 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
       // プロンプトを要件・項目定義から動的生成
       const prompt = `
 以下の要件（Markdown）と項目定義（Markdownテーブル）に基づいて、シンプルなHTML+CSSの画面イメージを生成してください。
+
+【重要な制約】
+- 外部画像URL（via.placeholder.com等）は絶対に使用しないでください
+- 画像が必要な場合はCSS Gradient、SVG、Unicode文字（絵文字）、背景色のみを使用してください
+- インターネット接続が不要で完全にスタンドアロンで動作するHTMLにしてください
+
 # 要件
 ${conditionsMarkdown || "（要件なし）"}
 
@@ -141,6 +153,81 @@ ${tableMarkdown}
     setIsGenerating(false);
   }, [conditionsMarkdown, spreadsheetData]);
 
+  // AI生成HTMLを画像として変換
+  const handleCaptureAsImage = useCallback(async () => {
+    console.log('🔍 画像変換デバッグ開始');
+    console.log('🔍 aiHtml exists:', !!aiHtml);
+    console.log('🔍 aiHtml length:', aiHtml?.length || 0);
+    console.log('🔍 onAiImageGenerated exists:', !!onAiImageGenerated);
+    
+    if (!aiHtml || !aiHtml.trim()) {
+      alert('⚠️ 画像に変換するAI生成コンテンツがありません。\n\n手順:\n1. 先に「AIで画面イメージ生成」ボタンをクリック\n2. HTML+CSSが生成されるのを待つ\n3. その後「画像として保存」ボタンをクリック');
+      return;
+    }
+
+    console.log('🖼️ AI生成HTML→画像変換開始');
+    console.log('📝 変換対象HTMLサイズ:', aiHtml.length, 'characters');
+    console.log('📝 HTML内容プレビュー:', aiHtml.substring(0, 200) + '...');
+    
+    setIsCapturing(true);
+    
+    try {
+      console.log('📞 convertAiMockupToImage関数を呼び出し中...');
+      const imageBase64 = await convertAiMockupToImage(aiHtml);
+      
+      console.log('✅ AI生成画像の作成完了');
+      console.log('📊 画像データサイズ:', imageBase64?.length || 0, 'characters');
+      
+      if (!imageBase64) {
+        throw new Error('画像変換結果がnullまたは空です');
+      }
+      
+      console.log('🔍 画像データプレビュー:', imageBase64.substring(0, 100) + '...');
+      
+      // 親コンポーネントに画像データを通知
+      if (onAiImageGenerated) {
+        console.log('📤 親コンポーネントに画像データを送信中...');
+        onAiImageGenerated(imageBase64);
+        console.log('✅ 親コンポーネントへの送信完了');
+      } else {
+        console.error('❌ onAiImageGenerated関数が存在しません');
+      }
+      
+      // 成功メッセージを詳細化
+      alert(`✅ AI生成画面を画像として保存しました！\n\n詳細:\n- 画像サイズ: ${Math.round(imageBase64.length / 1024)}KB\n- HTML要素数: 推定${(aiHtml.match(/<[^/][^>]*>/g) || []).length}個\n\n下記に緑枠のプレビューが表示されます。\nMarkdownエクスポート時に自動的に含まれます。`);
+      
+    } catch (error) {
+      console.error('❌ 画像変換エラー:', error);
+      console.error('❌ エラー詳細:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        aiHtmlLength: aiHtml?.length || 0,
+        aiHtmlPreview: aiHtml?.substring(0, 100) || 'empty'
+      });
+      
+      // 詳細なエラーメッセージ
+      let errorMessage = 'エラー詳細:\n';
+      if (error instanceof Error) {
+        errorMessage += `種類: ${error.name}\n`;
+        errorMessage += `メッセージ: ${error.message}\n`;
+        if (error.message.includes('html2canvas')) {
+          errorMessage += '\n💡 対処法:\n';
+          errorMessage += '- ブラウザを再読み込みしてください\n';
+          errorMessage += '- 別のブラウザで試してください\n';
+          errorMessage += '- HTML内容を簡素化してください';
+        }
+      } else {
+        errorMessage += `不明なエラー: ${String(error)}`;
+      }
+      
+      alert(`❌ 画像変換に失敗しました。\n\n${errorMessage}\n\n🔍 ブラウザのコンソール（F12）で詳細を確認してください。`);
+    } finally {
+      setIsCapturing(false);
+      console.log('🔄 画像変換処理完了');
+    }
+  }, [aiHtml, onAiImageGenerated]);
+
   return (
     <MarkdownSection title="画面イメージ" icon={Image}>
       <div className="space-y-2">
@@ -171,8 +258,40 @@ ${tableMarkdown}
             <Bot className="w-4 h-4 mr-2" />
             {isGenerating ? '生成中...' : 'AIで画面イメージ生成'}
           </button>
+
+          {aiHtml && (
+            <button
+              type="button"
+              className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg font-bold shadow-sm hover:bg-green-700 transition-colors text-sm"
+              onClick={handleCaptureAsImage}
+              disabled={isCapturing}
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              {isCapturing ? '変換中...' : '画像として保存'}
+            </button>
+          )}
           
-          <span className="text-xs text-gray-500">PNG,JPG,GIF対応 | HTML+CSS自動生成</span>
+          {/* テスト用：簡単なHTMLで変換テスト */}
+          <button
+            type="button"
+            className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg font-bold shadow-sm hover:bg-purple-700 transition-colors text-sm"
+            onClick={() => {
+              const testHtml = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; background: #f0f9ff; border-radius: 8px;">
+                  <h1 style="color: #1e40af; margin-bottom: 16px;">🧪 テスト画面</h1>
+                  <p style="color: #374151; margin-bottom: 12px;">これは画像変換のテスト用HTMLです。</p>
+                  <div style="background: #3b82f6; color: white; padding: 10px; border-radius: 4px; text-align: center;">
+                    画像変換テスト成功！
+                  </div>
+                </div>
+              `;
+              setAiHtml(testHtml);
+            }}
+          >
+            🧪 テスト用HTML
+          </button>
+          
+          <span className="text-xs text-gray-500">PNG,JPG,GIF対応 | HTML+CSS自動生成 | 画像変換</span>
         </div>
 
         {/* 1. 画像アップロード表示エリア（順序修正）*/}
@@ -237,6 +356,59 @@ ${tableMarkdown}
             />
             <div className="text-xs text-gray-400 px-2 py-1 bg-gray-50 border-t">
               AI生成HTML+CSS
+            </div>
+          </div>
+        )}
+
+        {/* 3. AI生成画像プレビュー領域 */}
+        {aiGeneratedImage && (
+          <div className="border-2 border-green-300 rounded-lg overflow-hidden shadow-lg">
+            <div className="p-3 bg-green-100 border-b-2 border-green-300">
+              <div className="text-lg font-bold text-green-800">📸 変換完了！AI生成画像</div>
+              <div className="text-sm text-green-700 mt-1">
+                ✅ 画像変換が成功しました。この画像がMarkdownエクスポートに含まれます。
+              </div>
+              <div className="text-xs text-green-600 mt-1">
+                画像サイズ: {Math.round(aiGeneratedImage.length / 1024)}KB | 
+                サイズ: 1000x1200px
+              </div>
+            </div>
+            <div className="bg-white p-4">
+              <div className="text-center mb-2">
+                <span className="text-sm font-medium text-gray-700">🖼️ 変換結果プレビュー</span>
+              </div>
+              <img 
+                src={`data:image/png;base64,${aiGeneratedImage}`}
+                alt="AI生成画面イメージ（変換結果）" 
+                className="w-full h-auto max-h-96 object-contain border-2 border-gray-300 rounded shadow-sm"
+                style={{ backgroundColor: '#f9fafb' }}
+                onLoad={() => console.log('✅ AI生成画像の表示が完了しました')}
+                onError={(e) => {
+                  console.error('❌ AI生成画像の表示に失敗:', e);
+                  console.error('❌ 画像データ長:', aiGeneratedImage.length);
+                  console.error('❌ 画像データ先頭:', aiGeneratedImage.substring(0, 100));
+                }}
+              />
+              <div className="text-center mt-2">
+                <button
+                  onClick={() => {
+                    // 画像を新しいタブで開く（デバッグ用）
+                    const newWindow = window.open();
+                    if (newWindow) {
+                      newWindow.document.write(`
+                        <html>
+                          <body style="margin:0;background:#f0f0f0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
+                            <img src="data:image/png;base64,${aiGeneratedImage}" style="max-width:100%;max-height:100%;border:1px solid #ccc;" />
+                          </body>
+                        </html>
+                      `);
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  🔍 新しいタブで画像を開く（確認用）
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import type { Project, Document } from '../types';
 import { addProject, addDocument, createProject, createDocument } from '../utils/storage';
+import { downloadProjectAsMarkdown } from '../utils/markdownExport';
+import { downloadProjectAsZip } from '../utils/zipExport';
 
 // プロジェクトエクスポート用のデータ構造
 interface ProjectExportData {
@@ -126,7 +128,8 @@ export const useProjectOperations = ({
                 doc.supplement,      // 補足説明を復元
                 doc.spreadsheet,     // スプレッドシートデータを復元
                 doc.mockup,          // 画面モックアップを復元
-                doc.mermaidCode || ''  // Mermaid ER図コードを復元
+                doc.mermaidCode || '',  // Mermaid ER図コードを復元
+                doc.aiGeneratedImage || null  // AI生成画像を復元
               );
               updatedState = addDocument(updatedState, newDocument);
               console.log(`📥 設計書「${doc.name}」を内容込みで復元 (mermaidCode: ${doc.mermaidCode ? 'あり' : 'なし'})`);
@@ -160,8 +163,94 @@ export const useProjectOperations = ({
     e.target.value = '';
   }, [projects, onCreateProject, onCreateDocument]);
 
+  // プロジェクト単位Markdownエクスポート
+  const handleProjectMarkdownExport = useCallback((projectId: string) => {
+    console.log('📄 プロジェクトMarkdownエクスポート開始:', projectId);
+    
+    // 対象プロジェクトを取得
+    const targetProject = projects.find(p => p.id === projectId);
+    if (!targetProject) {
+      alert('エクスポート対象のプロジェクトが見つかりません。');
+      return;
+    }
+
+    // 関連する設計書を取得
+    const relatedDocuments = documents.filter(doc => doc.projectId === projectId);
+    
+    console.log('📄 Markdownエクスポート対象:', {
+      project: targetProject.name,
+      documentCount: relatedDocuments.length
+    });
+
+    // AI生成画像のマップを作成
+    const aiGeneratedImages: Record<string, string> = {};
+    relatedDocuments.forEach(doc => {
+      if (doc.aiGeneratedImage) {
+        aiGeneratedImages[doc.id] = doc.aiGeneratedImage;
+      }
+    });
+
+    console.log('📄 AI生成画像情報:', {
+      総設計書数: relatedDocuments.length,
+      AI画像あり: Object.keys(aiGeneratedImages).length
+    });
+
+    // プロジェクト統合Markdownとしてダウンロード
+    downloadProjectAsMarkdown(
+      targetProject.name,
+      targetProject.description || '',
+      relatedDocuments,
+      aiGeneratedImages
+    );
+
+    alert(`プロジェクト「${targetProject.name}」をMarkdown形式でエクスポートしました！\n設計書数: ${relatedDocuments.length}件`);
+  }, [projects, documents]);
+
+  // プロジェクト単位ZIP形式エクスポート（Markdown+画像）
+  const handleProjectZipExport = useCallback(async (projectId: string) => {
+    console.log('📦 プロジェクトZIP形式エクスポート開始:', projectId);
+    
+    // 対象プロジェクトを取得
+    const targetProject = projects.find(p => p.id === projectId);
+    if (!targetProject) {
+      alert('エクスポート対象のプロジェクトが見つかりません。');
+      return;
+    }
+
+    // 関連する設計書を取得
+    const relatedDocuments = documents.filter(doc => doc.projectId === projectId);
+    
+    console.log('📦 ZIP形式エクスポート対象:', {
+      project: targetProject.name,
+      documentCount: relatedDocuments.length,
+      imagesCount: relatedDocuments.filter(d => d.mockup || d.aiGeneratedImage).length
+    });
+
+    try {
+      // ZIP形式でダウンロード
+      await downloadProjectAsZip(
+        targetProject.name,
+        targetProject.description || '',
+        relatedDocuments
+      );
+
+      const imageCount = relatedDocuments.filter(d => d.mockup || d.aiGeneratedImage).length;
+      alert(
+        `プロジェクト「${targetProject.name}」をZIP形式でエクスポートしました！\n\n` +
+        `📄 設計書数: ${relatedDocuments.length}件\n` +
+        `🖼️ 画像ファイル数: ${imageCount}件\n\n` +
+        `✅ Markdownファイル + 画像フォルダが含まれています。`
+      );
+    } catch (error) {
+      console.error('❌ ZIP形式エクスポートエラー:', error);
+      alert(`ZIP形式エクスポートに失敗しました。\n\nエラー: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [projects, documents]);
+
   return {
     handleProjectExport,
-    handleProjectImport
+    handleProjectImport,
+    handleProjectMarkdownExport,
+    handleProjectZipExport
   };
 };
