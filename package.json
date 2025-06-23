@@ -1,8 +1,20 @@
 {
-  "name": "design-doc-editor",
-  "private": true,
-  "version": "0.0.0",
+  "name": "mdai-designer", 
+  "private": false,
+  "version": "0.1.0",
   "type": "module",
+  "license": "MIT",
+  "description": "AI-powered Model Driven Architecture design document editor supporting screen design, data modeling, and project management",
+  "keywords": ["design", "documentation", "AI", "MDA", "React", "TypeScript", "Mermaid"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/[YOUR_USERNAME]/mdai-designer.git"
+  },
+  "homepage": "https://github.com/[YOUR_USERNAME]/mdai-designer#readme",
+  "bugs": {
+    "url": "https://github.com/[YOUR_USERNAME]/mdai-designer/issues"
+  },
+  "author": "mdai-designer contributors",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
