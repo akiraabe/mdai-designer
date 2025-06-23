@@ -13,6 +13,7 @@ interface MockupSectionProps {
   spreadsheetData?: any[];
   aiGeneratedImage?: string | null; // AI生成画像（新規追加）
   onAiImageGenerated?: (imageBase64: string) => void; // AI画像生成時のコールバック
+  documentId?: string; // 設計書ID（新規追加）
 }
 
 const LOCAL_STORAGE_KEY = 'ai-mockup-html';
@@ -62,24 +63,35 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
   spreadsheetData = [],
   aiGeneratedImage,
   onAiImageGenerated,
+  documentId,
 }) => {
   // AI生成HTML+CSS
   const [aiHtml, setAiHtml] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
 
-  // LocalStorageから初期値読込
-  useEffect(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) setAiHtml(saved);
-  }, []);
+  // 設計書別のLocalStorageキー
+  const storageKey = documentId ? `ai-mockup-html-${documentId}` : LOCAL_STORAGE_KEY;
 
-  // LocalStorageへ保存
+  // LocalStorageから初期値読込（設計書別）
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      console.log(`📥 AI HTML復元 [${documentId}]:`, saved.length, '文字');
+      setAiHtml(saved);
+    } else {
+      console.log(`📭 AI HTML なし [${documentId}]`);
+      setAiHtml(''); // 明示的にクリア
+    }
+  }, [storageKey, documentId]);
+
+  // LocalStorageへ保存（設計書別）
   useEffect(() => {
     if (aiHtml) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, aiHtml);
+      console.log(`💾 AI HTML保存 [${documentId}]:`, aiHtml.length, '文字');
+      localStorage.setItem(storageKey, aiHtml);
     }
-  }, [aiHtml]);
+  }, [aiHtml, storageKey, documentId]);
 
   // AIで画面イメージ（HTML+CSS）生成
   const handleGenerateAiMockup = useCallback(async () => {

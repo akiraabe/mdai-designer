@@ -66,14 +66,13 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
     supplementMarkdown,
     spreadsheetData,
     mockupImage,
+    aiGeneratedImage,
     setConditionsMarkdown,
     setSupplementMarkdown,
     setSpreadsheetData,
     setMockupImage,
+    setAiGeneratedImage,
   } = useDocumentState();
-
-  // AI生成画像の状態管理
-  const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
 
   // AI生成画像設定時のデバッグログ
   const handleAiImageGenerated = useCallback((imageBase64: string) => {
@@ -120,15 +119,12 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
     setSpreadsheetData(document.spreadsheet || []);
     setMockupImage(document.mockup || null);
     
-    // AI生成画像は初回またはドキュメント変更時のみ設定
-    if (document.aiGeneratedImage && document.aiGeneratedImage !== aiGeneratedImage) {
-      console.log('📥 DocumentからAI生成画像を復元:', document.aiGeneratedImage.length, 'characters');
-      setAiGeneratedImage(document.aiGeneratedImage);
-    } else if (!document.aiGeneratedImage && aiGeneratedImage) {
-      console.log('🔄 DocumentにAI画像なし、現在の状態をクリア');
-      // ドキュメントにAI画像がない場合はクリアしない（新規生成を保持）
+    // AI生成画像は常に設定（クリアも含む）
+    if (document.aiGeneratedImage !== aiGeneratedImage) {
+      console.log('📥 DocumentからAI生成画像を設定:', document.aiGeneratedImage ? `${document.aiGeneratedImage.length} characters` : 'null (クリア)');
+      setAiGeneratedImage(document.aiGeneratedImage || null);
     }
-  }, [document.id, document.conditions, document.supplement, document.spreadsheet, document.mockup, document.aiGeneratedImage, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage]);
+  }, [document.id, document.conditions, document.supplement, document.spreadsheet, document.mockup, document.aiGeneratedImage, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setAiGeneratedImage]);
 
   // 基本データの自動保存（AI生成画像以外）
   useEffect(() => {
@@ -284,6 +280,7 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
                 spreadsheetData={spreadsheetData}
                 aiGeneratedImage={aiGeneratedImage}
                 onAiImageGenerated={handleAiImageGenerated}
+                documentId={document.id}
               />
               <DefinitionsSection
                 spreadsheetData={spreadsheetData}
@@ -314,6 +311,7 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
               spreadsheetData={spreadsheetData}
               aiGeneratedImage={aiGeneratedImage}
               onAiImageGenerated={handleAiImageGenerated}
+              documentId={document.id}
             />
           )}
 
