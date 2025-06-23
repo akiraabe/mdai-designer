@@ -187,6 +187,9 @@ export const useAppState = () => {
   // プロジェクト一覧取得
   const projects = getProjects(appState);
   
+  // 全設計書取得
+  const documents = appState.documents;
+  
   // 現在のプロジェクトの設計書一覧取得
   const currentDocuments = navigationState.currentProjectId 
     ? getDocumentsByProjectId(appState, navigationState.currentProjectId)
@@ -195,10 +198,12 @@ export const useAppState = () => {
   return {
     // 状態
     appState,
+    setAppState,
     navigationState,
     currentDocument,
     currentProject,
     projects,
+    documents,
     currentDocuments,
     
     // アクション

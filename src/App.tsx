@@ -14,10 +14,13 @@ import { DocumentEditView } from './components/Document/DocumentEditView';
 const App: React.FC = () => {
   // アプリケーション状態管理
   const {
+    appState,
+    setAppState,
     navigationState,
     currentDocument,
     currentProject,
     projects,
+    documents,
     currentDocuments,
     handleCreateProject,
     handleCreateDocument,
@@ -37,7 +40,11 @@ const App: React.FC = () => {
         return (
           <ProjectListView
             projects={projects}
+            documents={documents}
+            appState={appState}
+            setAppState={setAppState}
             onCreateProject={handleCreateProject}
+            onCreateDocument={handleCreateDocument}
             onSelectProject={handleSelectProject}
             onUpdateProject={handleUpdateProject}
             onDeleteProject={handleDeleteProject}
