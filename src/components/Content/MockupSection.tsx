@@ -241,7 +241,7 @@ ${tableMarkdown}
     <MarkdownSection title="画面イメージ" icon={Image}>
       <div className="space-y-2">
         {/* コントロールボタンエリア - コンパクトに並列配置 */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-4">
           <input
             type="file"
             accept="image/*"
@@ -271,7 +271,8 @@ ${tableMarkdown}
           {aiHtml && (
             <button
               type="button"
-              className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg font-bold shadow-sm hover:bg-green-700 transition-colors text-sm"
+              className="flex items-center px-3 py-2 bg-gray-200 text-gray-800 border border-gray-400 rounded-lg cursor-pointer hover:bg-gray-300 transition-colors font-bold shadow-sm text-sm"
+              style={{ backgroundColor: '#e5e7eb', color: '#1f2937', fontWeight: 'bold' }}
               onClick={handleCaptureAsImage}
               disabled={isCapturing}
             >
