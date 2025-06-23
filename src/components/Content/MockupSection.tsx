@@ -1,12 +1,13 @@
 // src/components/Content/MockupSection.tsx
 import React, { useState, useCallback, useEffect } from 'react';
-import { Upload, Image, Bot } from 'lucide-react';
+import { Upload, Image, Bot, X } from 'lucide-react';
 import { MarkdownSection } from '../Common/MarkdownSection';
 import { aiService } from '../../services/aiService';
 
 interface MockupSectionProps {
   mockupImage: string | null;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onImageDelete?: () => void;
   conditionsMarkdown?: string;
   spreadsheetData?: any[];
 }
@@ -53,6 +54,7 @@ function spreadsheetToMarkdownTable(spreadsheetData: any[]): string {
 export const MockupSection: React.FC<MockupSectionProps> = ({
   mockupImage,
   onImageUpload,
+  onImageDelete,
   conditionsMarkdown = "",
   spreadsheetData = [],
 }) => {
@@ -141,8 +143,9 @@ ${tableMarkdown}
 
   return (
     <MarkdownSection title="画面イメージ" icon={Image}>
-      <div className="space-y-4">
-        <div className="flex items-center space-x-4">
+      <div className="space-y-2">
+        {/* コントロールボタンエリア - コンパクトに並列配置 */}
+        <div className="flex items-center space-x-3">
           <input
             type="file"
             accept="image/*"
@@ -152,63 +155,89 @@ ${tableMarkdown}
           />
           <label
             htmlFor="mockup-upload"
-            className="flex items-center px-4 py-2 bg-gray-200 text-gray-800 border border-gray-400 rounded-lg cursor-pointer hover:bg-gray-300 transition-colors font-bold shadow-md"
+            className="flex items-center px-3 py-2 bg-gray-200 text-gray-800 border border-gray-400 rounded-lg cursor-pointer hover:bg-gray-300 transition-colors font-bold shadow-sm text-sm"
             style={{ backgroundColor: '#e5e7eb', color: '#1f2937', fontWeight: 'bold' }}
           >
             <Upload className="w-4 h-4 mr-2" />
             画像をアップロード
           </label>
-          <span className="text-sm text-gray-500">
-            PNG, JPG, GIF対応
-          </span>
-        </div>
-
-        {/* AIで画面イメージ生成ボタン */}
-        <div className="flex items-center space-x-4">
+          
           <button
             type="button"
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors"
+            className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-sm hover:bg-blue-700 transition-colors text-sm"
             onClick={handleGenerateAiMockup}
             disabled={isGenerating}
           >
             <Bot className="w-4 h-4 mr-2" />
             {isGenerating ? '生成中...' : 'AIで画面イメージ生成'}
           </button>
-          <span className="text-sm text-gray-500">
-            HTML+CSSで自動生成（サンプル）
-          </span>
+          
+          <span className="text-xs text-gray-500">PNG,JPG,GIF対応 | HTML+CSS自動生成</span>
         </div>
 
-        {/* AI生成プレビュー領域 */}
+        {/* 1. 画像アップロード表示エリア（順序修正）*/}
+        {mockupImage ? (
+          <div className="space-y-2">
+            {/* 画像表示 */}
+            <div className="border rounded-lg overflow-hidden">
+              <img 
+                src={mockupImage} 
+                alt="画面モックアップ" 
+                className="w-full h-auto max-h-80 object-contain"
+              />
+            </div>
+            {/* 削除ボタン - 普通のスタイル */}
+            {onImageDelete && (
+              <div style={{ 
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginTop: '8px'
+              }}>
+                <button
+                  onClick={onImageDelete}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    padding: '6px 12px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                  title="画像を削除"
+                >
+                  <X style={{ width: '14px', height: '14px' }} />
+                  画像削除
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <Image className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+            <p className="text-sm text-gray-500">画面モックアップ画像をアップロード</p>
+          </div>
+        )}
+
+        {/* 2. AI生成プレビュー領域（順序修正）*/}
         {aiHtml && (
-          <div className="border rounded-lg overflow-hidden mt-2">
+          <div className="border rounded-lg overflow-hidden">
             <div
-              style={{ minHeight: 200, background: '#fff' }}
+              style={{ minHeight: 150, background: '#fff' }}
               dangerouslySetInnerHTML={{ __html: aiHtml }}
               data-testid="ai-mockup-preview"
             />
             <div className="text-xs text-gray-400 px-2 py-1 bg-gray-50 border-t">
-              ※このプレビューはAI生成HTML+CSSをそのまま表示しています
+              AI生成HTML+CSS
             </div>
-          </div>
-        )}
-
-        {/* 画像アップロード or プレースホルダー */}
-        {mockupImage ? (
-          <div className="border rounded-lg overflow-hidden">
-            <img 
-              src={mockupImage} 
-              alt="画面モックアップ" 
-              className="w-full h-auto max-h-96 object-contain"
-            />
-          </div>
-        ) : (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-            <Image className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500 mb-2">画面モックアップ画像をアップロードしてください</p>
-            <p className="text-sm text-gray-400">
-              Figma, Sketch, 手描きスキャン等、任意の形式で構いません
-            </p>
           </div>
         )}
       </div>

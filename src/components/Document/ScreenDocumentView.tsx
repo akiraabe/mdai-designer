@@ -1,7 +1,7 @@
 // src/components/Document/ScreenDocumentView.tsx
 // 画面設計書専用のドキュメント編集View
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { CopilotKit } from '@copilotkit/react-core';
 import type { Document, Project } from '../../types';
@@ -92,6 +92,13 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
 
     return () => clearTimeout(timer);
   }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, document.id, onUpdateDocument]);
+
+  // 画像削除機能
+  const handleImageDelete = useCallback(() => {
+    if (window.confirm('画像を削除しますか？この操作は元に戻せません。')) {
+      setMockupImage(null);
+    }
+  }, [setMockupImage]);
 
   // ファイル操作フック（画面設計書用）
   const {
@@ -210,6 +217,7 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
               <MockupSection
                 mockupImage={mockupImage}
                 onImageUpload={handleImageUpload}
+                onImageDelete={handleImageDelete}
                 conditionsMarkdown={conditionsMarkdown}
                 spreadsheetData={spreadsheetData}
               />
@@ -237,6 +245,7 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
             <MockupSection
               mockupImage={mockupImage}
               onImageUpload={handleImageUpload}
+              onImageDelete={handleImageDelete}
               conditionsMarkdown={conditionsMarkdown}
               spreadsheetData={spreadsheetData}
             />
