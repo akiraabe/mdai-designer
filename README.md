@@ -81,6 +81,16 @@ npm run preview
 - **Type-Safe**: TypeScript完全対応
 - **Responsibility Separation**: UI・状態・ロジックの明確な分離
 
+### Current Architecture
+💡 **個人利用・ローカル環境向け設計**
+- **データ永続化**: LocalStorageによるシンプルなローカル保存
+- **認証**: 個人利用のため認証不要（チーム利用時は要検討）
+- **AI統合**: クライアントサイドからの直接API呼び出し
+- **利用想定**: 単一ユーザー・個人プロジェクト向け
+- **スケール**: 小〜中規模プロジェクトに最適化
+
+👉 **チーム利用への拡張は [Issue #2](https://github.com/akiraabe/mdai-designer/issues/2) で検討中です**
+
 ## 📚 Documentation
 
 - [📋 Project Instructions (CLAUDE.md)](CLAUDE.md) - 包括的な技術仕様
