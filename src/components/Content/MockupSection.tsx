@@ -13,6 +13,7 @@ interface MockupSectionProps {
   spreadsheetData?: any[];
   aiGeneratedImage?: string | null; // AI生成画像（新規追加）
   onAiImageGenerated?: (imageBase64: string) => void; // AI画像生成時のコールバック
+  documentId?: string; // 設計書ID（新規追加）
 }
 
 const LOCAL_STORAGE_KEY = 'ai-mockup-html';
@@ -62,24 +63,32 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
   spreadsheetData = [],
   aiGeneratedImage,
   onAiImageGenerated,
+  documentId,
 }) => {
   // AI生成HTML+CSS
   const [aiHtml, setAiHtml] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
 
-  // LocalStorageから初期値読込
-  useEffect(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) setAiHtml(saved);
-  }, []);
+  // 設計書別のLocalStorageキー
+  const storageKey = documentId ? `ai-mockup-html-${documentId}` : LOCAL_STORAGE_KEY;
 
-  // LocalStorageへ保存
+  // LocalStorageから初期値読込（設計書別）
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      setAiHtml(saved);
+    } else {
+      setAiHtml(''); // 明示的にクリア
+    }
+  }, [storageKey, documentId]);
+
+  // LocalStorageへ保存（設計書別）
   useEffect(() => {
     if (aiHtml) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, aiHtml);
+      localStorage.setItem(storageKey, aiHtml);
     }
-  }, [aiHtml]);
+  }, [aiHtml, storageKey, documentId]);
 
   // AIで画面イメージ（HTML+CSS）生成
   const handleGenerateAiMockup = useCallback(async () => {
@@ -232,7 +241,7 @@ ${tableMarkdown}
     <MarkdownSection title="画面イメージ" icon={Image}>
       <div className="space-y-2">
         {/* コントロールボタンエリア - コンパクトに並列配置 */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-4">
           <input
             type="file"
             accept="image/*"
@@ -262,7 +271,8 @@ ${tableMarkdown}
           {aiHtml && (
             <button
               type="button"
-              className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg font-bold shadow-sm hover:bg-green-700 transition-colors text-sm"
+              className="flex items-center px-3 py-2 bg-gray-200 text-gray-800 border border-gray-400 rounded-lg cursor-pointer hover:bg-gray-300 transition-colors font-bold shadow-sm text-sm"
+              style={{ backgroundColor: '#e5e7eb', color: '#1f2937', fontWeight: 'bold' }}
               onClick={handleCaptureAsImage}
               disabled={isCapturing}
             >
@@ -270,26 +280,6 @@ ${tableMarkdown}
               {isCapturing ? '変換中...' : '画像として保存'}
             </button>
           )}
-          
-          {/* テスト用：簡単なHTMLで変換テスト */}
-          <button
-            type="button"
-            className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg font-bold shadow-sm hover:bg-purple-700 transition-colors text-sm"
-            onClick={() => {
-              const testHtml = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; background: #f0f9ff; border-radius: 8px;">
-                  <h1 style="color: #1e40af; margin-bottom: 16px;">🧪 テスト画面</h1>
-                  <p style="color: #374151; margin-bottom: 12px;">これは画像変換のテスト用HTMLです。</p>
-                  <div style="background: #3b82f6; color: white; padding: 10px; border-radius: 4px; text-align: center;">
-                    画像変換テスト成功！
-                  </div>
-                </div>
-              `;
-              setAiHtml(testHtml);
-            }}
-          >
-            🧪 テスト用HTML
-          </button>
           
           <span className="text-xs text-gray-500">PNG,JPG,GIF対応 | HTML+CSS自動生成 | 画像変換</span>
         </div>
@@ -395,13 +385,16 @@ ${tableMarkdown}
                     // 画像を新しいタブで開く（デバッグ用）
                     const newWindow = window.open();
                     if (newWindow) {
-                      newWindow.document.write(`
+                      const html = `
                         <html>
                           <body style="margin:0;background:#f0f0f0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
                             <img src="data:image/png;base64,${aiGeneratedImage}" style="max-width:100%;max-height:100%;border:1px solid #ccc;" />
                           </body>
                         </html>
-                      `);
+                      `;
+                      newWindow.document.open();
+                      newWindow.document.write(html);
+                      newWindow.document.close();
                     }
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 underline"

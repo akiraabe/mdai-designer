@@ -14,6 +14,7 @@ export const useDocumentState = () => {
   
   // 画像状態
   const [mockupImage, setMockupImage] = useState<string | null>(null);
+  const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
   
   // Mermaidコード状態
   const [mermaidCode, setMermaidCode] = useState<string>('');
@@ -24,6 +25,7 @@ export const useDocumentState = () => {
     supplementMarkdown,
     spreadsheetData,
     mockupImage,
+    aiGeneratedImage,
     mermaidCode,
     
     // セッター
@@ -31,6 +33,7 @@ export const useDocumentState = () => {
     setSupplementMarkdown,
     setSpreadsheetData,
     setMockupImage,
+    setAiGeneratedImage,
     setMermaidCode,
   };
 };
