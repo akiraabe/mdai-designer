@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { Project, Document } from '../types';
 import { addProject, addDocument, createProject, createDocument } from '../utils/storage';
+import { downloadProjectAsMarkdown } from '../utils/markdownExport';
 
 // プロジェクトエクスポート用のデータ構造
 interface ProjectExportData {
@@ -160,8 +161,38 @@ export const useProjectOperations = ({
     e.target.value = '';
   }, [projects, onCreateProject, onCreateDocument]);
 
+  // プロジェクト単位Markdownエクスポート
+  const handleProjectMarkdownExport = useCallback((projectId: string) => {
+    console.log('📄 プロジェクトMarkdownエクスポート開始:', projectId);
+    
+    // 対象プロジェクトを取得
+    const targetProject = projects.find(p => p.id === projectId);
+    if (!targetProject) {
+      alert('エクスポート対象のプロジェクトが見つかりません。');
+      return;
+    }
+
+    // 関連する設計書を取得
+    const relatedDocuments = documents.filter(doc => doc.projectId === projectId);
+    
+    console.log('📄 Markdownエクスポート対象:', {
+      project: targetProject.name,
+      documentCount: relatedDocuments.length
+    });
+
+    // プロジェクト統合Markdownとしてダウンロード
+    downloadProjectAsMarkdown(
+      targetProject.name,
+      targetProject.description || '',
+      relatedDocuments
+    );
+
+    alert(`プロジェクト「${targetProject.name}」をMarkdown形式でエクスポートしました！\n設計書数: ${relatedDocuments.length}件`);
+  }, [projects, documents]);
+
   return {
     handleProjectExport,
-    handleProjectImport
+    handleProjectImport,
+    handleProjectMarkdownExport
   };
 };

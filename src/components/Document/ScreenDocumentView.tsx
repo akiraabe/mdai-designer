@@ -126,6 +126,7 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
     setSpreadsheetData,
   });
 
+
   // バックアップ復元処理（画面設計書用）
   const handleRestoreFromBackup = (backupData: {
     conditionsMarkdown: string;
