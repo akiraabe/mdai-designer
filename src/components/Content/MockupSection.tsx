@@ -280,26 +280,6 @@ ${tableMarkdown}
             </button>
           )}
           
-          {/* テスト用：簡単なHTMLで変換テスト */}
-          <button
-            type="button"
-            className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg font-bold shadow-sm hover:bg-purple-700 transition-colors text-sm"
-            onClick={() => {
-              const testHtml = `
-                <div style="font-family: Arial, sans-serif; padding: 20px; background: #f0f9ff; border-radius: 8px;">
-                  <h1 style="color: #1e40af; margin-bottom: 16px;">🧪 テスト画面</h1>
-                  <p style="color: #374151; margin-bottom: 12px;">これは画像変換のテスト用HTMLです。</p>
-                  <div style="background: #3b82f6; color: white; padding: 10px; border-radius: 4px; text-align: center;">
-                    画像変換テスト成功！
-                  </div>
-                </div>
-              `;
-              setAiHtml(testHtml);
-            }}
-          >
-            🧪 テスト用HTML
-          </button>
-          
           <span className="text-xs text-gray-500">PNG,JPG,GIF対応 | HTML+CSS自動生成 | 画像変換</span>
         </div>
 
