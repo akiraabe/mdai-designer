@@ -1,87 +1,144 @@
-# 設計書エディタ
+# mdai-designer 🎨
 
-統合設計書システム - Webベースの設計文書作成・管理ツール
+> AI-powered Model Driven Architecture design document editor supporting screen design, data modeling, and project management
 
-## 概要
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![OSS Ready](https://img.shields.io/badge/OSS-Ready-green.svg)](LICENSE-ANALYSIS.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8+-blue.svg)](package.json)
+[![React](https://img.shields.io/badge/React-19+-blue.svg)](package.json)
 
-プロジェクト階層管理機能を備えた統合設計書システム。Markdown記述、画面モックアップ、項目定義表を統合した設計書エディタ。React + TypeScript + Viteで構築。
+## ✨ Features
 
-## クイックスタート
+### 🖥️ Screen Design Documents
+- **表示条件**: Markdown形式での画面仕様記述
+- **画面イメージ**: モックアップ画像のアップロード・管理
+- **項目定義**: Fortune-Sheetによるスプレッドシート形式編集
+- **補足説明**: 詳細仕様のMarkdown記述
 
+### 🗄️ Data Model Design Documents  
+- **ER図エディタ**: Mermaid記法によるビジュアルER図作成
+- **テキストエディタ**: 構造化されたエンティティ定義
+- **双方向同期**: テキスト⇔ビジュアル自動変換
+- **統計表示**: エンティティ数、リレーション数、フィールド数
+
+### 🤖 AI-Powered Design Generation
+- **自然言語指示**: 「ECサイトの設計書を作って」から自動生成
+- **修正提案**: 既存設計書への安全な変更提案
+- **@メンション機能**: 設計書間の参照による高度な生成
+- **バックアップ**: 全変更の自動バックアップ・復元機能
+
+### 📋 Project Management
+- **プロジェクト階層**: 複数設計書の統合管理
+- **エクスポート/インポート**: JSON形式でのプロジェクト単位バックアップ
+- **設計書タイプ**: 画面設計、データモデル、API設計（準備中）
+- **完全復元**: 内容・画像・スプレッドシートの100%復元
+
+### 🔄 Model Driven Architecture
+- **MDA実装**: データモデル → 画面設計の自動生成
+- **設計書連携**: @メンション機能による設計書間参照
+- **一貫性保証**: エンティティ定義の画面項目への自動反映
+- **双方向設計**: 画面設計 ⇔ データモデルの相互参照
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+
+- npm または yarn
+
+### Installation
 ```bash
+git clone https://github.com/akiraabe/mdai-designer.git
+cd mdai-designer
 npm install
+```
+
+### Development
+```bash
 npm run dev
 ```
+ブラウザで http://localhost:5173 にアクセス
 
-## 主な機能
+### Build
+```bash
+npm run build
+npm run preview
+```
 
-### 📁 プロジェクト階層管理
-- **プロジェクト管理**: 複数のプロジェクトを作成・管理
-- **設計書管理**: プロジェクト内で複数の設計書を管理
-- **自動保存**: 編集内容は1秒後に自動的にローカルストレージに保存
-- **データ永続化**: ページリロード後も編集内容が保持
+## 🏗️ Architecture
 
-### 📝 設計書編集機能
-- **Markdown形式での設計条件記述**: 表示条件・補足説明
-- **画面モックアップ**: 画像アップロード・表示機能
-- **項目定義表**: スプレッドシート形式での編集（Fortune-Sheet使用）
-- **タブ切り替え**: 全体表示・個別セクション表示
+### Technology Stack
+- **Frontend**: React 19 + TypeScript + Vite
+- **Styling**: CSS + Tailwind CSS classes  
+- **Icons**: Lucide React
+- **Spreadsheet**: Fortune-Sheet (production ready)
+- **Markdown**: @uiw/react-md-editor (production ready)
+- **AI Integration**: AWS Bedrock + OpenAI API
+- **Diagrams**: Mermaid + React Flow
 
-### 💾 データ管理
-- **自動保存**: 編集中のデータは自動的にローカルストレージに保存
-- **エクスポート**: JSON形式でのファイル出力（バックアップ・移行用）
-- **インポート**: JSONファイルからのデータ読み込み
+### Key Design Patterns
+- **Custom Hooks**: 状態管理とビジネスロジックの分離
+- **Component Architecture**: 機能別コンポーネント分割
+- **Type-Safe**: TypeScript完全対応
+- **Responsibility Separation**: UI・状態・ロジックの明確な分離
 
-### 🤖 AI統合機能
-- **チャットアシスタント**: CopilotKit統合によるAI支援
-- **双方向連携**: WebUIデータの読み取り・書き込み機能
+## 📚 Documentation
 
-#### チャットアシスタントAIにドラフトを作ってもらう様子
+- [📋 Project Instructions (CLAUDE.md)](CLAUDE.md) - 包括的な技術仕様
+- [🔧 Migration Guide](MIGRATION.md) - リポジトリ移行手順
+- [📄 License Analysis](LICENSE-ANALYSIS.md) - OSS対応ライセンス分析
+- [📝 Third-Party Notices](NOTICE.md) - 依存ライブラリクレジット
+
+## 🎯 Use Cases
+
+### 企業システム設計
+- **要件定義書**: AIとの対話で要件を設計書化
+- **画面設計書**: モックアップ + 項目定義の統合管理
+- **データモデル**: ER図による論理設計
+- **API設計**: RESTful API仕様書（開発予定）
+
+### 個人開発・学習
+- **システム設計学習**: MDA概念の実践的理解
+- **AI協調設計**: 自然言語による設計書生成体験
+- **設計パターン**: 業界標準パターンの学習・適用
+
+## 🎬 Demo
+
+### AIアシスタントによるドラフト生成
 ![ai_generate_draft](./fixture/ai_generate_draft.gif)
 
-## 使用方法
+## 🤝 Contributing
 
-### 初回利用
-1. アプリケーションを起動するとプロジェクト一覧画面が表示されます
-2. 「新規プロジェクト」ボタンでプロジェクトを作成
-3. プロジェクト名をクリックして設計書一覧画面に移動
-4. 「新規設計書」ボタンで設計書を作成
-5. 設計書編集画面で各セクションを編集
+プロジェクトへの貢献を歓迎します！
 
-### データ保存について
-- **自動保存**: 編集内容は1秒後に自動的にローカルストレージに保存されます
-- **ページリロード**: データは自動保存されているため、ページをリロードしても内容が保持されます  
-- **エクスポート**: バックアップや移行のためにJSONファイルとして出力可能
-- **インポート**: JSONファイルから設計書データを読み込み可能
+1. **Fork** このリポジトリ
+2. **Feature branch** を作成 (`git checkout -b feature/amazing-feature`)
+3. **Commit** 変更内容 (`git commit -m 'Add amazing feature'`)
+4. **Push** to branch (`git push origin feature/amazing-feature`)
+5. **Pull Request** を作成
 
-### 画面構成
-```
-プロジェクト一覧
-├── プロジェクト作成・編集・削除
-└── プロジェクト選択
-    └── 設計書一覧
-        ├── 設計書作成・編集・削除
-        └── 設計書選択
-            └── 設計書編集
-                ├── 表示条件（Markdown）
-                ├── 画面イメージ（画像アップロード）
-                ├── 項目定義（スプレッドシート）
-                └── 補足説明（Markdown）
-```
+詳細は [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
 
-## 開発・テスト
+## 📄 License
 
-### 開発環境
-```bash
-npm run dev          # 開発サーバー起動
-npm run build        # 本番ビルド
-npm run lint         # ESLint実行
-npm run preview      # ビルド後のプレビュー
-```
+このプロジェクトは MIT License の下で公開されています。詳細は [LICENSE](LICENSE) ファイルをご覧ください。
 
-### E2Eテスト
-```bash
-cd e2e-tests
-npx playwright install  # 初回のみ
-npx playwright test      # テスト実行
-```
+### Third-party Licenses
+全ての依存ライブラリはOSS互換ライセンスです。詳細は [NOTICE.md](NOTICE.md) をご覧ください。
+
+## 🎉 Acknowledgments
+
+- **React Community** - 素晴らしいエコシステム
+- **Fortune-Sheet** - 高機能スプレッドシートコンポーネント
+- **Mermaid** - 美しい図表生成ライブラリ
+- **AWS Bedrock** - 強力なAI基盤サービス
+- **Open Source Community** - このプロジェクトを支える全てのライブラリ
+
+---
+
+## 🔗 Links
+
+- **GitHub**: https://github.com/akiraabe/mdai-designer
+- **Issues**: https://github.com/akiraabe/mdai-designer/issues
+- **Discussions**: https://github.com/akiraabe/mdai-designer/discussions
+
+*Made with ❤️ by the mdai-designer contributors*

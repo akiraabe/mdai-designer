@@ -8,11 +8,11 @@
   "keywords": ["design", "documentation", "AI", "MDA", "React", "TypeScript", "Mermaid"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/[YOUR_USERNAME]/mdai-designer.git"
+    "url": "https://github.com/akiraabe/mdai-designer.git"
   },
-  "homepage": "https://github.com/[YOUR_USERNAME]/mdai-designer#readme",
+  "homepage": "https://github.com/akiraabe/mdai-designer#readme",
   "bugs": {
-    "url": "https://github.com/[YOUR_USERNAME]/mdai-designer/issues"
+    "url": "https://github.com/akiraabe/mdai-designer/issues"
   },
   "author": "mdai-designer contributors",
   "scripts": {
