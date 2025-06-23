@@ -88,7 +88,8 @@ export function createDocument(
   supplement = '',
   spreadsheet = null,
   mockup: string | null = null,
-  mermaidCode = ''
+  mermaidCode = '',
+  aiGeneratedImage: string | null = null
 ): Document {
   const now = getCurrentTimestamp();
   return {
@@ -100,6 +101,7 @@ export function createDocument(
     supplement,
     spreadsheet,
     mockup,
+    aiGeneratedImage,
     mermaidCode,
     createdAt: now,
     updatedAt: now

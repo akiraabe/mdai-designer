@@ -116,6 +116,8 @@ export const useAppState = () => {
     supplement?: string;
     spreadsheet?: any;
     mockup?: string | null;
+    aiGeneratedImage?: string | null;
+    mermaidCode?: string;
   }) => {
     const newState = updateDocument(appState, documentId, updates);
     setAppState(newState);

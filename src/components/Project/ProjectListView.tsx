@@ -2,7 +2,7 @@
 // プロジェクトの表示・作成・管理機能
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, FolderOpen, Calendar, FileText, MoreVertical, Edit2, Trash2, ChevronDown, Download, Upload, Settings } from 'lucide-react';
+import { Plus, FolderOpen, Calendar, FileText, MoreVertical, Edit2, Trash2, ChevronDown, Download, Upload, Settings, Package } from 'lucide-react';
 import type { Project } from '../../types';
 import { useProjectOperations } from '../../hooks/useProjectOperations';
 
@@ -36,7 +36,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // プロジェクト操作フックを使用
-  const { handleProjectExport, handleProjectImport, handleProjectMarkdownExport } = useProjectOperations({
+  const { handleProjectExport, handleProjectImport, handleProjectMarkdownExport, handleProjectZipExport } = useProjectOperations({
     projects,
     documents,
     appState,
@@ -98,6 +98,11 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
 
   const handleMarkdownExportClick = (projectId: string) => {
     handleProjectMarkdownExport(projectId);
+    setShowManagementMenu(false);
+  };
+
+  const handleZipExportClick = async (projectId: string) => {
+    await handleProjectZipExport(projectId);
     setShowManagementMenu(false);
   };
 
@@ -181,6 +186,20 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                     >
                       <FileText className="w-4 h-4 mr-3 text-green-600" />
                       {project.name} (Markdown)
+                    </button>
+                  ))}
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <div className="px-4 py-2 text-xs text-blue-600 font-medium">
+                    📦 ZIP形式エクスポート（Markdown+画像）
+                  </div>
+                  {projects.map((project) => (
+                    <button
+                      key={`zip-${project.id}`}
+                      onClick={() => handleZipExportClick(project.id)}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 pl-8"
+                    >
+                      <Package className="w-4 h-4 mr-3 text-blue-600" />
+                      {project.name} (ZIP)
                     </button>
                   ))}
                   {projects.length === 0 && (

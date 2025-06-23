@@ -73,7 +73,10 @@ const convertSpreadsheetToMarkdownTable = (spreadsheetData: unknown[]): string =
 /**
  * 画面設計書をMarkdown形式に変換
  */
-export const convertScreenDocumentToMarkdown = (document: Document): string => {
+export const convertScreenDocumentToMarkdown = (
+  document: Document, 
+  aiGeneratedImage?: string | null
+): string => {
   const { name, conditions, supplement, spreadsheet, mockup } = document;
   
   let markdown = `# ${name}\n\n`;
@@ -95,9 +98,21 @@ export const convertScreenDocumentToMarkdown = (document: Document): string => {
   
   // 画面イメージ
   markdown += `## 🖼️ 画面イメージ\n\n`;
+  
+  // アップロード画像
   if (mockup) {
+    markdown += `### アップロード画像\n`;
     markdown += `![画面モックアップ](data:image/png;base64,${mockup})\n\n`;
-  } else {
+  }
+  
+  // AI生成画像
+  if (aiGeneratedImage) {
+    markdown += `### AI生成画面イメージ\n`;
+    markdown += `![AI生成画面イメージ](data:image/png;base64,${aiGeneratedImage})\n\n`;
+  }
+  
+  // 画像がない場合
+  if (!mockup && !aiGeneratedImage) {
     markdown += `画像なし\n\n`;
   }
   
@@ -244,7 +259,8 @@ const extractEntitiesFromMermaid = (mermaidCode: string): EntityInfo[] => {
 export const convertProjectToMarkdown = (
   projectName: string,
   projectDescription: string,
-  documents: Document[]
+  documents: Document[],
+  aiGeneratedImages?: Record<string, string> // documentId -> aiGeneratedImage のマップ
 ): string => {
   let markdown = `# ${projectName} 設計書\n\n`;
   
@@ -285,9 +301,22 @@ export const convertProjectToMarkdown = (
       
       // 画面イメージ
       markdown += `#### 🖼️ 画面イメージ\n`;
+      
+      // アップロード画像
       if (doc.mockup) {
+        markdown += `**アップロード画像:**\n`;
         markdown += `![${doc.name}画面モックアップ](data:image/png;base64,${doc.mockup})\n\n`;
-      } else {
+      }
+      
+      // AI生成画像
+      const aiImage = aiGeneratedImages?.[doc.id];
+      if (aiImage) {
+        markdown += `**AI生成画面イメージ:**\n`;
+        markdown += `![${doc.name}AI生成画面イメージ](data:image/png;base64,${aiImage})\n\n`;
+      }
+      
+      // 画像がない場合
+      if (!doc.mockup && !aiImage) {
         markdown += `画像なし\n\n`;
       }
       
@@ -395,11 +424,12 @@ export const convertProjectToMarkdown = (
 export const downloadProjectAsMarkdown = (
   projectName: string,
   projectDescription: string,
-  documents: Document[]
+  documents: Document[],
+  aiGeneratedImages?: Record<string, string>
 ): void => {
   console.log('📄 プロジェクト単位Markdownエクスポート開始:', projectName);
   
-  const markdown = convertProjectToMarkdown(projectName, projectDescription, documents);
+  const markdown = convertProjectToMarkdown(projectName, projectDescription, documents, aiGeneratedImages);
   const filename = `${projectName}_project-design.md`;
   
   // ファイルダウンロード
@@ -422,19 +452,22 @@ export const downloadProjectAsMarkdown = (
 /**
  * 設計書をMarkdownファイルとしてダウンロード（既存機能・後方互換性用）
  */
-export const downloadDocumentAsMarkdown = (document: Document): void => {
+export const downloadDocumentAsMarkdown = (
+  document: Document, 
+  aiGeneratedImage?: string | null
+): void => {
   let markdown: string;
   let filename: string;
   
   if (document.type === 'screen') {
-    markdown = convertScreenDocumentToMarkdown(document);
+    markdown = convertScreenDocumentToMarkdown(document, aiGeneratedImage);
     filename = `${document.name}_screen-design.md`;
   } else if (document.type === 'model') {
     markdown = convertModelDocumentToMarkdown(document);
     filename = `${document.name}_data-model.md`;
   } else {
     // その他のタイプは画面設計書として扱う
-    markdown = convertScreenDocumentToMarkdown(document);
+    markdown = convertScreenDocumentToMarkdown(document, aiGeneratedImage);
     filename = `${document.name}_design.md`;
   }
   

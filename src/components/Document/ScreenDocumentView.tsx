@@ -37,6 +37,7 @@ interface ScreenDocumentViewProps {
     supplement?: string;
     spreadsheet?: any;
     mockup?: string | null;
+    aiGeneratedImage?: string | null;
   }) => void;
   onGoBack: () => void;
 }
@@ -71,15 +72,65 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
     setMockupImage,
   } = useDocumentState();
 
+  // AI生成画像の状態管理
+  const [aiGeneratedImage, setAiGeneratedImage] = useState<string | null>(null);
+
+  // AI生成画像設定時のデバッグログ
+  const handleAiImageGenerated = useCallback((imageBase64: string) => {
+    console.log('🎯 ScreenDocumentView: AI画像受信開始');
+    console.log('🎯 受信データサイズ:', imageBase64?.length || 0, 'characters');
+    console.log('🎯 受信データ先頭:', imageBase64?.substring(0, 50) + '...');
+    
+    if (!imageBase64) {
+      console.error('❌ ScreenDocumentView: 受信したAI画像データが空です');
+      return;
+    }
+    
+    setAiGeneratedImage(imageBase64);
+    console.log('✅ ScreenDocumentView: AI画像状態を更新しました');
+    
+    // 状態更新の確認（次のレンダリングサイクルで）
+    setTimeout(() => {
+      console.log('🔍 状態更新確認:', {
+        aiGeneratedImageLength: aiGeneratedImage?.length || 0,
+        設定値との一致: aiGeneratedImage === imageBase64
+      });
+    }, 100);
+  }, [aiGeneratedImage]);
+
+  // AI生成画像状態の変更を監視
+  useEffect(() => {
+    console.log('🔄 AI生成画像状態が変更されました:', {
+      存在: !!aiGeneratedImage,
+      サイズ: aiGeneratedImage?.length || 0,
+      タイプ: typeof aiGeneratedImage
+    });
+  }, [aiGeneratedImage]);
+
   // 初期データの設定（画面設計書のフィールドのみ）
   useEffect(() => {
+    console.log('🔄 初期データ設定useEffect実行:', {
+      documentId: document.id,
+      aiGeneratedImageExists: !!document.aiGeneratedImage,
+      currentAiImageExists: !!aiGeneratedImage
+    });
+    
     setConditionsMarkdown(document.conditions || '');
     setSupplementMarkdown(document.supplement || '');
     setSpreadsheetData(document.spreadsheet || []);
     setMockupImage(document.mockup || null);
-  }, [document, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage]);
+    
+    // AI生成画像は初回またはドキュメント変更時のみ設定
+    if (document.aiGeneratedImage && document.aiGeneratedImage !== aiGeneratedImage) {
+      console.log('📥 DocumentからAI生成画像を復元:', document.aiGeneratedImage.length, 'characters');
+      setAiGeneratedImage(document.aiGeneratedImage);
+    } else if (!document.aiGeneratedImage && aiGeneratedImage) {
+      console.log('🔄 DocumentにAI画像なし、現在の状態をクリア');
+      // ドキュメントにAI画像がない場合はクリアしない（新規生成を保持）
+    }
+  }, [document.id, document.conditions, document.supplement, document.spreadsheet, document.mockup, document.aiGeneratedImage, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage]);
 
-  // データ変更時の自動保存（画面設計書フィールドのみ）
+  // 基本データの自動保存（AI生成画像以外）
   useEffect(() => {
     const timer = setTimeout(() => {
       onUpdateDocument(document.id, {
@@ -92,6 +143,16 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
 
     return () => clearTimeout(timer);
   }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, document.id, onUpdateDocument]);
+
+  // AI生成画像の保存（即座に実行、ループを防ぐ）
+  useEffect(() => {
+    if (aiGeneratedImage && aiGeneratedImage !== document.aiGeneratedImage) {
+      console.log('💾 AI生成画像を保存中...', aiGeneratedImage.length, 'characters');
+      onUpdateDocument(document.id, {
+        aiGeneratedImage: aiGeneratedImage,
+      });
+    }
+  }, [aiGeneratedImage, document.id, document.aiGeneratedImage, onUpdateDocument]);
 
   // 画像削除機能
   const handleImageDelete = useCallback(() => {
@@ -221,6 +282,8 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
                 onImageDelete={handleImageDelete}
                 conditionsMarkdown={conditionsMarkdown}
                 spreadsheetData={spreadsheetData}
+                aiGeneratedImage={aiGeneratedImage}
+                onAiImageGenerated={handleAiImageGenerated}
               />
               <DefinitionsSection
                 spreadsheetData={spreadsheetData}
@@ -249,6 +312,8 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
               onImageDelete={handleImageDelete}
               conditionsMarkdown={conditionsMarkdown}
               spreadsheetData={spreadsheetData}
+              aiGeneratedImage={aiGeneratedImage}
+              onAiImageGenerated={handleAiImageGenerated}
             />
           )}
 
