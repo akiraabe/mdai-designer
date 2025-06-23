@@ -1,13 +1,18 @@
 // プロジェクト一覧画面
 // プロジェクトの表示・作成・管理機能
 
-import React, { useState } from 'react';
-import { Plus, FolderOpen, Calendar, FileText, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, FolderOpen, Calendar, FileText, MoreVertical, Edit2, Trash2, ChevronDown, Download, Upload, Settings } from 'lucide-react';
 import type { Project } from '../../types';
+import { useProjectOperations } from '../../hooks/useProjectOperations';
 
 interface ProjectListViewProps {
   projects: Project[];
+  documents: any[];  // 設計書一覧（プロジェクト操作用）
+  appState: any; // AppState
+  setAppState: (state: any) => void; // 状態更新関数
   onCreateProject: (name: string, description?: string) => void;
+  onCreateDocument: (name: string, projectId: string, type?: any) => void;  // 設計書作成（インポート用）
   onSelectProject: (projectId: string) => void;
   onUpdateProject: (projectId: string, updates: { name?: string; description?: string }) => void;
   onDeleteProject: (projectId: string) => void;
@@ -15,7 +20,11 @@ interface ProjectListViewProps {
 
 export const ProjectListView: React.FC<ProjectListViewProps> = ({
   projects,
+  documents,
+  appState,
+  setAppState,
   onCreateProject,
+  onCreateDocument,
   onSelectProject,
   onUpdateProject,
   onDeleteProject
@@ -23,6 +32,18 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
+  const [showManagementMenu, setShowManagementMenu] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // プロジェクト操作フックを使用
+  const { handleProjectExport, handleProjectImport } = useProjectOperations({
+    projects,
+    documents,
+    appState,
+    setAppState,
+    onCreateProject,
+    onCreateDocument
+  });
 
   // 新規作成フォーム送信
   const handleCreateSubmit = (e: React.FormEvent) => {
@@ -69,6 +90,34 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     }
   };
 
+  // プロジェクト管理メニューのイベントハンドラー
+  const handleExportClick = (projectId: string) => {
+    handleProjectExport(projectId);
+    setShowManagementMenu(false);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+    setShowManagementMenu(false);
+  };
+
+  // メニュー外クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showManagementMenu && !((event.target as Element)?.closest('.management-menu'))) {
+        setShowManagementMenu(false);
+      }
+    };
+
+    if (showManagementMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showManagementMenu]);
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       {/* ヘッダー */}
@@ -77,15 +126,73 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           <h1 className="text-3xl font-bold text-gray-900">プロジェクト一覧</h1>
           <p className="text-gray-600 mt-2">設計書を管理するプロジェクトを選択または作成してください</p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white border-2 border-blue-800 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-lg"
-          style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          新規プロジェクト
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* プロジェクト管理メニュー */}
+          <div className="relative management-menu">
+            <button
+              onClick={() => setShowManagementMenu(!showManagementMenu)}
+              className="flex items-center px-4 py-2 bg-purple-600 text-white border-2 border-purple-800 rounded-lg hover:bg-purple-700 transition-colors font-bold shadow-lg"
+              style={{ backgroundColor: '#9333ea', color: '#ffffff', fontWeight: 'bold' }}
+            >
+              <Settings className="w-5 h-5 mr-2" />
+              プロジェクト管理
+              <ChevronDown className="w-4 h-4 ml-1" />
+            </button>
+            
+            {/* ドロップダウンメニュー */}
+            {showManagementMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                <div className="py-1">
+                  <button
+                    onClick={handleImportClick}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Upload className="w-4 h-4 mr-3" />
+                    プロジェクトインポート
+                  </button>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <div className="px-4 py-2 text-xs text-gray-500 font-medium">
+                    プロジェクトエクスポート
+                  </div>
+                  {projects.map((project) => (
+                    <button
+                      key={project.id}
+                      onClick={() => handleExportClick(project.id)}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 pl-8"
+                    >
+                      <Download className="w-4 h-4 mr-3" />
+                      {project.name}
+                    </button>
+                  ))}
+                  {projects.length === 0 && (
+                    <div className="px-8 py-2 text-sm text-gray-400 italic">
+                      エクスポート可能なプロジェクトがありません
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white border-2 border-blue-800 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-lg"
+            style={{ backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: 'bold' }}
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            新規プロジェクト
+          </button>
+        </div>
       </div>
+
+      {/* 隠しファイル入力 */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleProjectImport}
+        style={{ display: 'none' }}
+      />
 
       {/* 新規作成フォーム */}
       {showCreateForm && (

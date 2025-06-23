@@ -1,7 +1,7 @@
 // src/components/Chat/BaseChatPanel.tsx
 // チャットパネルの共通基盤コンポーネント（UI・メッセージ処理）
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
 import { checkAPIKey } from '../../services/aiService';
 import type { ModificationProposal } from '../../types/aiTypes';
@@ -54,7 +54,6 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
   const [mentionSuggestions, setMentionSuggestions] = useState<DocumentReference[]>([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
-  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   
   // 最もシンプルなアプローチ：最適化なしで直接渡す
@@ -176,7 +175,6 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
           setShowMentionSuggestions(true);
           setSelectedSuggestionIndex(0);
           setMentionStartIndex(mentionResult.startIndex);
-          setMentionPosition({ top: 100, left: Math.max(50, inputRef.current?.getBoundingClientRect().left || 100) });
           console.log('✅ BaseChatPanel: ポップアップ表示準備完了', {
             suggestionsCount: filteredSuggestions.length,
             position: calculateMentionPosition()
@@ -382,7 +380,7 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
               
               {/* 特化機能エリア（修正提案ボタンなど） */}
               {children && React.isValidElement(children) && 
-                React.cloneElement(children, { message } as any)}
+                React.cloneElement(children, { message } as { message: ChatMessage })}
               
               <div
                 className={`text-xs mt-1 ${
