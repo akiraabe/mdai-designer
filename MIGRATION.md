@@ -18,12 +18,49 @@
 
 ## 🔧 ステップ1: 新リポジトリ作成
 
-1. **GitHub.comにアクセス**
+1. **GitHub.com にログイン** (`akiraabe`アカウントでログイン)
 2. **新リポジトリ作成**:
    - Repository name: `mdai-designer`
    - Description: `AI-powered Model Driven Architecture design document editor`
    - Public設定
    - **⚠️ 重要**: Add README file、Add .gitignore、Choose a license は**チェックしない**
+3. **Create repository** ボタンをクリック
+
+### 🔑 認証問題の解決（403エラー対策）
+
+**ステップA: 古い認証情報のクリア**
+```bash
+# GitHub認証情報をKeychainから削除
+security delete-internet-password -s github.com
+
+# GitHub CLIからログアウト
+gh auth logout
+```
+
+**ステップB: GitHub CLI で正しいアカウントにサインイン**
+```bash
+# GitHub CLIでサインイン開始
+gh auth login --hostname github.com --git-protocol https --web
+
+# 表示されるコードをコピー（例: 5EB4-CE6D）
+# ブラウザで https://github.com/login/device にアクセス
+# コードを入力し、akiraabe アカウントでログイン
+```
+
+**ステップC: 認証状態確認**
+```bash
+# 正しいアカウントでログインしているか確認
+gh auth status
+
+# 以下のように表示されることを確認:
+# ✓ Logged in to github.com account akiraabe
+```
+
+**代替方法: Personal Access Token**（GitHub CLI使用不可の場合）:
+1. GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Generate new token (classic)
+3. Scopes: `repo` (Full control of private repositories)
+4. トークンをコピー（プッシュ時のパスワードとして使用）
 
 ## 🌐 ステップ2: リモートリポジトリ変更
 
