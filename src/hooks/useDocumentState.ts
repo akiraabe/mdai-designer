@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   initialConditionsMarkdown, 
   initialSupplementMarkdown, 
@@ -7,11 +7,6 @@ import {
 import type { SpreadsheetData } from '../types/spreadsheet';
 
 export const useDocumentState = () => {
-  // インスタンス識別用のランダムID
-  const instanceId = React.useRef(Math.random().toString(36).substr(2, 9)).current;
-  
-  console.log(`🔧 useDocumentState インスタンス作成: ${instanceId}`);
-  
   // Markdownとスプレッドシートの状態
   const [conditionsMarkdown, setConditionsMarkdown] = useState<string>(initialConditionsMarkdown);
   const [supplementMarkdown, setSupplementMarkdown] = useState<string>(initialSupplementMarkdown);
@@ -23,17 +18,6 @@ export const useDocumentState = () => {
   
   // Mermaidコード状態
   const [mermaidCode, setMermaidCode] = useState<string>('');
-  
-  // 状態変更をログに記録
-  const loggedSetMockupImage = React.useCallback((value: string | null) => {
-    console.log(`📸 mockupImage変更 [${instanceId}]:`, value ? `${value.length}文字` : 'null');
-    setMockupImage(value);
-  }, [instanceId]);
-  
-  const loggedSetAiGeneratedImage = React.useCallback((value: string | null) => {
-    console.log(`🤖 aiGeneratedImage変更 [${instanceId}]:`, value ? `${value.length}文字` : 'null');
-    setAiGeneratedImage(value);
-  }, [instanceId]);
 
   return {
     // 状態
@@ -44,15 +28,12 @@ export const useDocumentState = () => {
     aiGeneratedImage,
     mermaidCode,
     
-    // セッター（ログ付き）
+    // セッター
     setConditionsMarkdown,
     setSupplementMarkdown,
     setSpreadsheetData,
-    setMockupImage: loggedSetMockupImage,
-    setAiGeneratedImage: loggedSetAiGeneratedImage,
+    setMockupImage,
+    setAiGeneratedImage,
     setMermaidCode,
-    
-    // デバッグ情報
-    _instanceId: instanceId,
   };
 };

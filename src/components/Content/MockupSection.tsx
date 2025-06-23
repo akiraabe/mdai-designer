@@ -77,10 +77,8 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
     if (saved) {
-      console.log(`📥 AI HTML復元 [${documentId}]:`, saved.length, '文字');
       setAiHtml(saved);
     } else {
-      console.log(`📭 AI HTML なし [${documentId}]`);
       setAiHtml(''); // 明示的にクリア
     }
   }, [storageKey, documentId]);
@@ -88,7 +86,6 @@ export const MockupSection: React.FC<MockupSectionProps> = ({
   // LocalStorageへ保存（設計書別）
   useEffect(() => {
     if (aiHtml) {
-      console.log(`💾 AI HTML保存 [${documentId}]:`, aiHtml.length, '文字');
       localStorage.setItem(storageKey, aiHtml);
     }
   }, [aiHtml, storageKey, documentId]);
@@ -407,13 +404,16 @@ ${tableMarkdown}
                     // 画像を新しいタブで開く（デバッグ用）
                     const newWindow = window.open();
                     if (newWindow) {
-                      newWindow.document.write(`
+                      const html = `
                         <html>
                           <body style="margin:0;background:#f0f0f0;display:flex;justify-content:center;align-items:center;min-height:100vh;">
                             <img src="data:image/png;base64,${aiGeneratedImage}" style="max-width:100%;max-height:100%;border:1px solid #ccc;" />
                           </body>
                         </html>
-                      `);
+                      `;
+                      newWindow.document.open();
+                      newWindow.document.write(html);
+                      newWindow.document.close();
                     }
                   }}
                   className="text-xs text-blue-600 hover:text-blue-800 underline"
