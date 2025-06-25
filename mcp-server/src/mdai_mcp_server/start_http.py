@@ -14,7 +14,7 @@ def main():
     print("📡 Running HTTP server on port 3001")
     print("🔗 WebUI可能: http://localhost:5173")
     
-    uvicorn.run(http_app, host="0.0.0.0", port=3001, reload=True)
+    uvicorn.run("mdai_mcp_server.http_server:http_app", host="0.0.0.0", port=3001, reload=True)
 
 if __name__ == "__main__":
     main()
