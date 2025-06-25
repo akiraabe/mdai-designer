@@ -7,6 +7,7 @@ import { ChatMessageActions } from './ChatMessage';
 import { generateChatResponse } from '../../services/aiService';
 import { ModificationService } from '../../services/modificationService';
 import { DocumentReferenceService } from '../../services/documentReferenceService';
+import { mcpClient } from '../../services/mcpClient';
 import type { WebUIData, ModificationProposal } from '../../types/aiTypes';
 import type { AppState } from '../../types';
 
@@ -274,59 +275,57 @@ export const ModelChatPanel: React.FC<ModelChatPanelProps> = ({
         }
       }
 
-      // 生成要求の場合（データモデル設計書では必ずMermaid生成）
+      // 生成要求の場合（MCPサーバー経由でデータモデル生成）
       if (isGenerationRequest(userMessage)) {
-        console.log('🆕 データモデル生成要求として認識:', userMessage);
+        console.log('🆕 MCP経由データモデル生成要求:', userMessage);
         
-        // Mermaid専用の生成プロンプトを作成
-        const mermaidPrompt = `
-【絶対ルール】あなたはデータモデル設計書専用です。以下の指示を必ずMermaid ER図で応答してください。
-
-指示: ${userMessage}
-
-【重要な解釈指針】:
-どんな指示でも（画面、UI、機能などの単語があっても）、必要なデータ構造をER図で設計してください。
-- 「画面を作って」→ その画面で扱うデータのエンティティ設計
-- 「ログイン機能」→ User、Session等のエンティティ設計
-- 「注文システム」→ Order、OrderItem、Product等のエンティティ設計
-- 「管理機能」→ 管理に必要なデータ構造設計
-
-現在の設計書状況:
-- 補足説明: ${currentData.supplementMarkdown?.length || 0}文字
-- Mermaid ER図: ${mermaidCode ? 'あり（追加・修正）' : '未設定（新規作成）'}
-
-【必須】erDiagramで始まるMermaid記法で応答してください。エンティティと関係を定義してください。
-
-例:
-erDiagram
-    User {
-        int id PK
-        string name
-        string email
-        datetime created_at
-    }
-    Order {
-        int id PK
-        int user_id FK
-        decimal amount
-        datetime order_date
-    }
-    User ||--o{ Order : "has many"
-        `;
-        
-        const mermaidResponse = await generateChatResponse(mermaidPrompt, currentData);
-        
-        // mermaidコードを抽出
-        const mermaidMatch = mermaidResponse.match(/```(?:mermaid)?\s*(erDiagram[\s\S]*?)```/i) || 
-                            mermaidResponse.match(/(erDiagram[\s\S]*)/i);
-        
-        if (mermaidMatch) {
-          const mermaidCodeGenerated = mermaidMatch[1].trim();
-          console.log('🎨 Mermaidコード生成:', mermaidCodeGenerated.substring(0, 100));
-          onMermaidCodeUpdate(mermaidCodeGenerated);
-          return `🎨 **ER図を生成しました！**\n\n📊 **データモデル**: Mermaid記法でER図を作成\n- 「データモデル」タブで確認してください\n\n🎉 新しいER図が生成されました！さらに修正や追加が必要でしたらお知らせください。`;
-        } else {
-          return `❌ ER図の生成に失敗しました。再度お試しください。`;
+        try {
+          // MCPサーバーに生成要求を送信
+          const mcpResult = await mcpClient.generateDataModel({
+            prompt: userMessage,
+            project_context: {
+              name: '現在のプロジェクト',
+              id: currentProjectId
+            },
+            references: [] // @メンション機能で参照される他の設計書（将来拡張）
+          });
+          
+          console.log('✅ MCP生成結果:', {
+            mermaidLength: mcpResult.mermaidCode?.length || 0,
+            supplementLength: mcpResult.supplement?.length || 0,
+            mode: mcpResult.metadata?.mode
+          });
+          
+          // 生成されたMermaidコードをWebUIに反映
+          if (mcpResult.mermaidCode) {
+            onMermaidCodeUpdate(mcpResult.mermaidCode);
+          }
+          
+          // 生成された補足説明があれば反映（オプション）
+          if (mcpResult.supplement && mcpResult.supplement.trim().length > 0) {
+            onSupplementMarkdownUpdate(mcpResult.supplement);
+          }
+          
+          return `🎨 **MCPサーバー経由でER図を生成しました！**\n\n📊 **データモデル**: Mermaid記法でER図を作成\n- 「データモデル」タブで確認してください\n- 「補足説明」タブに詳細情報を追加しました\n\n🔧 **生成モード**: ${mcpResult.metadata?.mode || '不明'}\n🎉 新しいER図が生成されました！さらに修正や追加が必要でしたらお知らせください。`;
+          
+        } catch (error) {
+          console.error('❌ MCP生成エラー:', error);
+          
+          // MCPサーバーエラー時は従来のAI生成にフォールバック
+          console.log('🔄 従来のAI生成にフォールバック');
+          const fallbackPrompt = `【データモデル設計書専用】\n指示: ${userMessage}\n\n【必須】erDiagramで始まるMermaid記法で応答してください。`;
+          const mermaidResponse = await generateChatResponse(fallbackPrompt, currentData);
+          
+          const mermaidMatch = mermaidResponse.match(/```(?:mermaid)?\s*(erDiagram[\s\S]*?)```/i) || 
+                              mermaidResponse.match(/(erDiagram[\s\S]*)/i);
+          
+          if (mermaidMatch) {
+            const mermaidCodeGenerated = mermaidMatch[1].trim();
+            onMermaidCodeUpdate(mermaidCodeGenerated);
+            return `🎨 **ER図を生成しました（フォールバック）**\n\n⚠️ MCPサーバーに接続できないため、従来のAI生成を使用しました\n📊 「データモデル」タブで確認してください`;
+          } else {
+            return `❌ MCPサーバーとの通信に失敗し、フォールバック生成も失敗しました。\n\n**エラー**: ${error instanceof Error ? error.message : '不明'}\n\n**対処法**: MCPサーバーが起動しているか確認してください。`;
+          }
         }
       }
 
