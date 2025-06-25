@@ -19,6 +19,7 @@ import { ActionButtons } from '../Header/ActionButtons';
 import { TabNavigation } from '../Navigation/TabNavigation';
 import { ScreenChatPanel } from '../Chat/ScreenChatPanel';
 import { BackupManager } from '../Common/BackupManager';
+import { TagInput } from '../Common/TagInput';
 
 // 画面設計書専用セクション
 import { ConditionsSection } from '../Content/ConditionsSection';
@@ -38,6 +39,7 @@ interface ScreenDocumentViewProps {
     spreadsheet?: any;
     mockup?: string | null;
     aiGeneratedImage?: string | null;
+    tags?: string[];
   }) => void;
   onGoBack: () => void;
 }
@@ -53,6 +55,9 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
   
   // バックアップ管理状態
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false);
+  
+  // タグ状態管理
+  const [tags, setTags] = useState<string[]>(document.tags || []);
   
   // アプリケーション状態（Model Driven Architecture対応）
   const { appState } = useAppState();
@@ -89,12 +94,13 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
     setSupplementMarkdown(document.supplement || '');
     setSpreadsheetData(document.spreadsheet || []);
     setMockupImage(document.mockup || null);
+    setTags(document.tags || []);
     
     // AI生成画像は常に設定（クリアも含む）
     if (document.aiGeneratedImage !== aiGeneratedImage) {
       setAiGeneratedImage(document.aiGeneratedImage || null);
     }
-  }, [document.id, document.conditions, document.supplement, document.spreadsheet, document.mockup, document.aiGeneratedImage, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setAiGeneratedImage]);
+  }, [document.id, document.conditions, document.supplement, document.spreadsheet, document.mockup, document.tags, document.aiGeneratedImage, setConditionsMarkdown, setSupplementMarkdown, setSpreadsheetData, setMockupImage, setAiGeneratedImage]);
 
   // 基本データの自動保存（AI生成画像以外）
   useEffect(() => {
@@ -104,11 +110,12 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
         supplement: supplementMarkdown,
         spreadsheet: spreadsheetData,
         mockup: mockupImage,
+        tags: tags,
       });
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, document.id, onUpdateDocument]);
+  }, [conditionsMarkdown, supplementMarkdown, spreadsheetData, mockupImage, tags, document.id, onUpdateDocument]);
 
   // AI生成画像の保存（即座に実行、ループを防ぐ）
   useEffect(() => {
@@ -224,6 +231,15 @@ export const ScreenDocumentView: React.FC<ScreenDocumentViewProps> = ({
               />
             </div>
           </div>
+        </div>
+
+        {/* タグ入力セクション */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <TagInput
+            tags={tags}
+            onTagsChange={setTags}
+            placeholder="設計書のタグを入力（例: 認証, フロントエンド, API）"
+          />
         </div>
 
         {/* タブナビゲーション（画面設計書専用） */}

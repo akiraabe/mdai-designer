@@ -18,6 +18,7 @@ import { ActionButtons } from '../Header/ActionButtons';
 import { TabNavigation } from '../Navigation/TabNavigation';
 import { ModelChatPanel } from '../Chat/ModelChatPanel';
 import { BackupManager } from '../Common/BackupManager';
+import { TagInput } from '../Common/TagInput';
 
 // データモデル設計書専用セクション
 import { ModelsSection } from '../Content/ModelsSection';
@@ -32,6 +33,7 @@ interface ModelDocumentViewProps {
   onUpdateDocument: (documentId: string, updates: {
     supplement?: string;
     mermaidCode?: string;
+    tags?: string[];
   }) => void;
   onGoBack: () => void;
 }
@@ -47,6 +49,9 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
   
   // バックアップ管理状態
   const [isBackupManagerOpen, setIsBackupManagerOpen] = useState(false);
+  
+  // タグ状態管理
+  const [tags, setTags] = useState<string[]>(document.tags || []);
   
   // アプリケーション状態（@メンション機能対応）
   const { appState } = useAppState();
@@ -66,6 +71,7 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
   useEffect(() => {
     setSupplementMarkdown(document.supplement || '');
     setMermaidCode(document.mermaidCode || '');
+    setTags(document.tags || []);
   }, [document, setSupplementMarkdown, setMermaidCode]);
 
   // データ変更時の自動保存（データモデル設計書フィールドのみ）
@@ -74,11 +80,12 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
       onUpdateDocument(document.id, {
         supplement: supplementMarkdown,
         mermaidCode: mermaidCode,
+        tags: tags,
       });
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [supplementMarkdown, mermaidCode, document.id, onUpdateDocument]);
+  }, [supplementMarkdown, mermaidCode, tags, document.id, onUpdateDocument]);
 
   // ファイル操作フック（データモデル設計書用）
   const {
@@ -166,6 +173,15 @@ export const ModelDocumentView: React.FC<ModelDocumentViewProps> = ({
               />
             </div>
           </div>
+        </div>
+
+        {/* タグ入力セクション */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <TagInput
+            tags={tags}
+            onTagsChange={setTags}
+            placeholder="設計書のタグを入力（例: データモデル, ER図, バックエンド）"
+          />
         </div>
 
         {/* タブナビゲーション（データモデル設計書専用） */}

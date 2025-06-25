@@ -18,6 +18,7 @@ export interface Document {
   projectId: string;       // 親プロジェクトID
   name: string;            // 設計書名
   type: DocumentType;      // 設計書タイプ
+  tags: string[];          // タグ配列（プロジェクト内での分類用）
   conditions: string;      // 表示条件 (Markdown)
   supplement: string;      // 補足説明 (Markdown)
   spreadsheet: any;        // スプレッドシートデータ (Fortune-Sheet形式) // eslint-disable-line @typescript-eslint/no-explicit-any

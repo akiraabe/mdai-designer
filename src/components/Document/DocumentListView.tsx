@@ -2,7 +2,7 @@
 // 特定プロジェクト内の設計書の表示・作成・管理機能
 
 import React, { useState } from 'react';
-import { Plus, FileText, Calendar, ArrowLeft, MoreVertical, Edit2, Trash2, FolderOpen } from 'lucide-react';
+import { Plus, FileText, Calendar, ArrowLeft, MoreVertical, Edit2, Trash2, FolderOpen, Tag } from 'lucide-react';
 import type { Document, Project, DocumentType } from '../../types';
 import { DocumentTypeSelector } from './DocumentTypeSelector';
 import { getDocumentTypeInfo } from '../../utils/documentTypes';
@@ -30,6 +30,43 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
   const [editingDocument, setEditingDocument] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '' });
   const [selectedType, setSelectedType] = useState<DocumentType>('screen');
+  
+  // フィルタリング状態
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState('');
+
+  // プロジェクト内の全タグを取得
+  const allTags = Array.from(new Set(
+    documents.flatMap(doc => doc.tags || [])
+  )).sort();
+
+  // フィルタリング済み設計書一覧
+  const filteredDocuments = documents.filter(document => {
+    // 名前による検索
+    const matchesSearch = searchText === '' || 
+      document.name.toLowerCase().includes(searchText.toLowerCase());
+    
+    // タグによるフィルタリング（選択された全てのタグを含む）
+    const matchesTags = selectedTags.length === 0 || 
+      selectedTags.every(tag => document.tags?.includes(tag));
+    
+    return matchesSearch && matchesTags;
+  });
+
+  // タグ選択/解除処理
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  // フィルターをクリア
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setSearchText('');
+  };
 
   // 新規作成フォーム送信
   const handleCreateSubmit = (e: React.FormEvent) => {
@@ -109,6 +146,69 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
         </button>
       </div>
 
+      {/* 検索・フィルターエリア */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex flex-col space-y-4">
+          {/* 検索バー */}
+          <div className="flex items-center space-x-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="設計書名で検索..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            {(selectedTags.length > 0 || searchText) && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm"
+              >
+                フィルタークリア
+              </button>
+            )}
+          </div>
+
+          {/* タグフィルター */}
+          {allTags.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Tag className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">タグで絞り込み:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs border transition-colors ${
+                      selectedTags.includes(tag)
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* フィルター結果表示 */}
+          <div className="text-sm text-gray-600">
+            {documents.length > 0 && (
+              <span>
+                {filteredDocuments.length} / {documents.length} 件の設計書を表示
+                {selectedTags.length > 0 && (
+                  <span> (タグ: {selectedTags.join(', ')})</span>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* 新規作成フォーム */}
       {showCreateForm && (
         <div className="bg-white border-2 border-green-200 rounded-lg p-6 mb-6">
@@ -172,9 +272,21 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
             新規設計書作成
           </button>
         </div>
+      ) : filteredDocuments.length === 0 ? (
+        <div className="text-center py-12">
+          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-medium text-gray-900 mb-2">条件に一致する設計書がありません</h3>
+          <p className="text-gray-500 mb-4">検索条件やタグフィルターを変更してみてください</p>
+          <button
+            onClick={clearFilters}
+            className="inline-flex items-center px-4 py-2 bg-blue-500 text-white border border-blue-600 rounded-lg hover:bg-blue-600 font-bold shadow-md"
+          >
+            フィルターをクリア
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {documents.map((document) => (
+          {filteredDocuments.map((document) => (
             <div key={document.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               {editingDocument === document.id ? (
                 // 編集フォーム
@@ -263,6 +375,26 @@ export const DocumentListView: React.FC<DocumentListViewProps> = ({
                         </span>
                       </div>
                     </div>
+                    
+                    {/* タグ表示 */}
+                    {document.tags && document.tags.length > 0 && (
+                      <div className="mb-3">
+                        <div className="flex items-center gap-1 mb-1">
+                          <Tag className="h-3 w-3 text-gray-400" />
+                          <span className="text-xs text-gray-500">タグ:</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {document.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs border"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <div className="flex items-center">
