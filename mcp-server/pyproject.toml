@@ -1,0 +1,32 @@
+[project]
+name = "mdai-mcp-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Akira Abe", email = "akiraabe2005@yahoo.co.jp" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.13",
+    "fastmcp>=2.9.0",
+    "pydantic>=2.11.7",
+    "python-dotenv>=1.1.1",
+    "uvicorn>=0.34.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+mdai-mcp-server = "mdai_mcp_server.server:main"
+mdai-http-server = "mdai_mcp_server.start_http:main"
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+]
