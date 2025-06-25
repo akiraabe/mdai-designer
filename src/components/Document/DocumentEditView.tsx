@@ -18,6 +18,7 @@ interface DocumentEditViewProps {
     mockup?: string | null;
     aiGeneratedImage?: string | null;
     mermaidCode?: string;
+    tags?: string[];
   }) => void;
   onGoBack: () => void;
 }
