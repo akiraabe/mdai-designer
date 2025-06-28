@@ -28,3 +28,5 @@ e2e-tests/screenshots/
 e2e-tests/downloads/
 e2e-tests/test-results/
 e2e-tests/playwright-report/
+
+.mcp.json
