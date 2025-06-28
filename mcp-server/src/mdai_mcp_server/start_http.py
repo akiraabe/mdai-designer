@@ -10,7 +10,7 @@ def main():
     import uvicorn
     
     print("🚀 MDAI MCP HTTP Server starting...")
-    print("🔧 Mode: Fixed Mermaid Response (疎通確認用)")
+    print("🔧 Mode: AI Dynamic Generation (OpenAI/Bedrock)")
     print("📡 Running HTTP server on port 3001")
     print("🔗 WebUI可能: http://localhost:5173")
     

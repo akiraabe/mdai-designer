@@ -159,7 +159,7 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     print("🚀 MDAI MCP HTTP Server starting...")
-    print("🔧 Mode: Fixed Mermaid Response (疎通確認用)")
+    print("🔧 Mode: AI Dynamic Generation (OpenAI/Bedrock)")
     print("📡 Running HTTP server on port 3001")
     
     uvicorn.run(http_app, host="0.0.0.0", port=3001)

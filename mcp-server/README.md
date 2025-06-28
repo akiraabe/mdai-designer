@@ -1,283 +1,252 @@
 # MDAI MCP Server
 
-統合設計書システム用のModel Context Protocol (MCP) サーバー。WebUIからのデータモデル生成要求をAI経由で処理します。
+統合設計書システム用のModel Context Protocol (MCP) サーバー。AI動的生成によりWebUIとClaude Desktop両方からインテリジェントなデータモデル生成機能を提供します。
 
-## 🚀 機能概要
+## 📍 位置づけ
 
-- **AI動的生成**: OpenAI GPT-4 / AWS Bedrock Claude経由でMermaid ER図を生成
-- **高品質プロンプト**: データモデル設計特化の詳細なプロンプトエンジニアリング
-- **HTTP API**: WebUI（Viteプロキシ）経由でのシームレス統合
-- **自動リロード**: コード変更時の自動再起動対応
-- **フォールバック機能**: AI失敗時の適切なエラーハンドリング
+### 統合設計書システムにおける役割
+- **AI生成の分離**: WebUIから独立したAI処理サーバー
+- **MCP標準準拠**: Claude Desktop等の標準MCPクライアントに対応
+- **双方向対応**: WebUI統合とスタンドアロン利用の両立
 
-## 📋 事前準備
+### 利用可能な環境
+1. **WebUI統合**: ModelChatPanelからのシームレス呼び出し
+2. **Claude Desktop**: @メンション形式での直接利用
+3. **その他MCPクライアント**: VS Code、CLI等での標準MCP利用
 
-### 1. 環境変数設定
+## 🚀 主要機能
 
-AI生成機能を使用するために、以下のいずれかのAPIキーを設定してください：
+- **🤖 AI動的生成**: OpenAI GPT-4.1 / AWS Bedrock Claudeによる高品質Mermaid ER図生成
+- **📊 インテリジェント設計**: ユーザープロンプトに応じた業界特化データモデル自動設計
+- **🔄 自動最適化**: Mermaid構文エラーの自動検出・修正、PK/FK関係の適切な処理
+- **⚡ 2種類のTransport**: stdio（Claude Desktop用）+ HTTP（WebUI用）
+- **🛡️ 堅牢性**: AI失敗時のフォールバック機能とエラーハンドリング
 
-```bash
-# .envファイルを作成
-cp .env.example .env
+## 📋 クイックスタート
 
-# .envファイルを編集して以下を設定
-```
-
-**OpenAI API（推奨）**
-```bash
-OPENAI_API_KEY=your-openai-api-key-here
-```
-
-**AWS Bedrock（代替/上級者向け）**
-```bash
-AWS_ACCESS_KEY_ID=your-aws-access-key-here
-AWS_SECRET_ACCESS_KEY=your-aws-secret-key-here
-AWS_REGION=us-west-2
-```
-
-### 2. 依存関係インストール
-
+### 1. 環境準備
 ```bash
 # mcp-serverディレクトリに移動
 cd mcp-server
 
-# uv環境での依存関係インストール
+# 環境変数設定
+cp .env.example .env
+# .envファイルを編集してOpenAI API キーを設定
+
+# 依存関係インストール
 uv sync
 ```
 
-## 🔧 サーバー起動方法
-
-### HTTP サーバー起動（WebUI統合用・推奨）
-
+### 2. WebUI統合での使用
 ```bash
-# HTTPサーバー起動（ポート3001・自動リロード有効）
+# MCPサーバー起動（自動リロード）
 uv run mdai-http-server
 
-# または詳細コマンド
-uv run python -m mdai_mcp_server.start_http
+# 別ターミナルでWebUI起動
+cd ..
+npm run dev
+
+# WebUIのModelChatPanelで「ECサイトのデータモデルを作って」
 ```
 
-**🔄 自動リロード機能**
-- コード変更時に**自動的に再起動**
-- 手動再起動は**不要**
-- ターミナルで「Reloading...」と表示される
-
-**起動確認:**
+### 3. Claude Desktop単体での使用
 ```bash
+# 標準MCPサーバー起動
+uv run mdai-mcp-server
+
+# Claude Desktop設定（後述）後、Claude Desktopで：
+# @mdai-model-server ECサイトのデータモデルを作成してください
+```
+
+## 🖥️ Claude Desktop 設定
+
+### 設定ファイルの場所
+```bash
+# macOS
+~/Library/Application Support/Claude/claude_desktop_config.json
+
+# Windows  
+%APPDATA%\Claude\claude_desktop_config.json
+
+# Linux
+~/.config/Claude/claude_desktop_config.json
+```
+
+### 設定内容
+```json
+{
+  "mcpServers": {
+    "mdai-model-server": {
+      "command": "/opt/homebrew/bin/uv",
+      "args": [
+        "--directory",
+        "/Users/akiraabe/practice/design-doc-editor/mcp-server",
+        "run",
+        "mdai-mcp-server"
+      ],
+      "cwd": "/Users/akiraabe/practice/design-doc-editor/mcp-server"
+    }
+  }
+}
+```
+
+### 設定手順
+1. **uvコマンドの場所確認**: `which uv`
+2. **設定ファイル編集**: 上記JSONを追加（パスは環境に応じて調整）
+3. **Claude Desktop再起動**: 設定反映のため完全再起動
+4. **接続テスト**: `@mdai-model-server ping`
+
+## 💬 Claude Desktop での使用方法
+
+### 基本的な使い方
+```
+@mdai-model-server ECサイトのデータモデルを作成してください
+```
+
+### 具体的なプロンプト例
+
+**🛒 ECサイト系**
+```
+ECサイトの注文管理システムのデータモデルを作って
+- ユーザー登録・認証
+- 商品カタログ管理  
+- 注文・決済処理
+- レビュー・評価機能
+```
+
+**📚 業務システム**
+```
+プロジェクト管理システムのER図を設計してください
+- チーム・メンバー管理
+- タスク・マイルストーン
+- 工数・進捗管理
+- ファイル・ドキュメント管理
+```
+
+**🏥 特定業界**
+```
+診療管理システムのデータモデルを設計
+- 患者・医師情報
+- 診療科・予約管理
+- 診察・処方記録
+- 検査・画像データ
+```
+
+### 期待される出力
+Claude DesktopがMCPサーバーを呼び出し、AIが生成したプロンプト特化のMermaid ER図を表示・解説します：
+
+```mermaid
+erDiagram
+    User {
+        int id PK
+        string name
+        string email
+        string password_hash
+        datetime created_at
+        datetime updated_at
+    }
+    Product {
+        int id PK
+        string name
+        decimal price
+        text description
+        int category_id FK
+        int stock_quantity
+        boolean is_active
+    }
+    Order {
+        int id PK
+        int user_id FK
+        decimal total_amount
+        string status
+        datetime order_date
+        datetime shipped_at
+    }
+    OrderItem {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        decimal unit_price
+    }
+    Category {
+        int id PK
+        string name
+        text description
+    }
+    
+    User ||--o{ Order : "places"
+    Order ||--o{ OrderItem : "contains"
+    Product ||--o{ OrderItem : "included_in"
+    Category ||--o{ Product : "categorizes"
+```
+
+**AI生成の特徴:**
+- **業界標準**: ECサイトの標準的なデータ構造
+- **関係性**: 適切なリレーションとカーディナリティ
+- **実用性**: 実際のシステム開発で使用可能なレベル
+
+## 🔧 開発・保守
+
+### 主要コマンド
+```bash
+# WebUI統合用（自動リロード）
+uv run mdai-http-server
+
+# Claude Desktop用（stdio通信）
+uv run mdai-mcp-server
+
 # ヘルスチェック
 curl http://localhost:3001/health
 
-# Ping テスト
+# API直接テスト
 curl -X POST http://localhost:3001/ \
   -H "Content-Type: application/json" \
   -d '{"method": "ping", "id": "test"}'
 ```
 
-### 標準MCPサーバー起動（stdio通信）
-
-```bash
-# 標準MCPサーバー起動
-uv run mdai-mcp-server
-
-# または詳細コマンド
-uv run python -m mdai_mcp_server.server
+### ファイル構成
 ```
-
-## 🌐 WebUIとの統合
-
-### 1. MCPサーバー起動
-```bash
-cd mcp-server
-uv run mdai-http-server
-```
-
-### 2. WebUI起動
-```bash
-cd ..  # プロジェクトルートに戻る
-npm run dev
-```
-
-### 3. 動作確認
-1. WebUIでデータモデル設計書を作成・編集
-2. チャットパネルを開く
-3. 「ECサイトのデータモデルを作って」などの生成要求を送信
-4. AI生成されたMermaid ER図が表示されることを確認
-
-## 🔧 利用可能なMCPツール
-
-### `generate_data_model`
-**説明**: AI経由でMermaid ER図とドキュメントを生成
-
-**パラメータ**:
-```json
-{
-  "prompt": "ECサイトのデータモデルを作って",
-  "project_context": {
-    "name": "プロジェクト名",
-    "id": "project-id"
-  },
-  "references": ["参照する他の設計書"]
-}
-```
-
-**レスポンス**:
-```json
-{
-  "mermaidCode": "erDiagram\n  User { ... }",
-  "supplement": "## データモデル設計書\n...",
-  "metadata": {
-    "generated_at": "2025-06-25T17:00:00",
-    "mode": "ai_generated",
-    "ai_provider": "openai"
-  }
-}
-```
-
-### `ping`
-**説明**: サーバー疎通確認
-
-**レスポンス**:
-```json
-{
-  "status": "ok",
-  "message": "MDAI MCP Server is running!"
-}
-```
-
-### `get_server_info`
-**説明**: サーバー情報取得
-
-**レスポンス**:
-```json
-{
-  "server_name": "MDAI MCP Server",
-  "version": "0.1.0",
-  "available_tools": ["generate_data_model", "ping", "get_server_info"]
-}
+mcp-server/
+├── src/mdai_mcp_server/
+│   ├── server.py          # 標準MCPサーバー（stdio）
+│   ├── http_server.py     # HTTP APIサーバー（WebUI用）
+│   ├── ai_service.py      # AI生成サービス
+│   └── tools/             # MCPツール実装
+├── .env                   # 環境変数（作成必要）
+├── README.md              # このファイル（概要・使い方）
+└── TECHNICAL.md           # 技術詳細・開発情報
 ```
 
 ## 🛠️ トラブルシューティング
 
-### AI生成エラーの場合
+### よくある問題
 
-**症状**: エラーER図が表示される
+**Claude Desktop接続エラー**
+```
+error: Failed to spawn: `mdai-mcp-server`
+```
+→ 設定ファイルのuvパス・プロジェクトパスを確認
+
+**AI生成エラー**
 ```
 erDiagram
-    ERROR {
-        string message
-        datetime occurred_at
-    }
+    ERROR { ... }
 ```
+→ .envファイルのOPENAI_API_KEY設定を確認
 
-**解決方法**:
-1. `.env`ファイルでAPIキーが正しく設定されているか確認
-2. インターネット接続状況を確認
-3. APIキーの利用制限・有効期限を確認
+**WebUI連携エラー**
+→ MCPサーバー（port 3001）とWebUI（port 5173）の両方が起動しているか確認
 
-### サーバー起動エラーの場合
+### サポート
+問題発生時は以下の情報とともにお問い合わせください：
+- サーバーログ（ターミナル出力）
+- 環境情報（`uv --version`, `which uv`）
+- 設定ファイル内容（APIキーは除く）
 
-**ポート競合エラー**:
-```bash
-# ポート3001を使用中のプロセスを確認
-lsof -i :3001
+## 📖 関連リンク
 
-# プロセス停止
-kill -9 <PID>
-```
-
-**依存関係エラー**:
-```bash
-# 依存関係を再インストール
-uv sync --force
-```
-
-### WebUI連携エラーの場合
-
-**プロキシエラー**:
-- Vite開発サーバー（port 5173）が起動しているか確認
-- MCPサーバー（port 3001）が起動しているか確認
-- ブラウザのネットワークタブでプロキシエラーを確認
-
-## 🔄 開発フロー
-
-### 1. 開発サーバー起動（自動リロード）
-```bash
-# サーバー起動（コード変更時に自動再起動）
-uv run mdai-http-server
-
-# ターミナルに以下が表示される：
-# 🚀 MDAI MCP HTTP Server starting...
-# 🔧 Mode: AI Dynamic Generation
-# 📡 Running HTTP server on port 3001 (Auto-reload enabled)
-```
-
-### 2. コード編集・テスト
-```bash
-# コード修正（保存時に自動再起動）
-vim src/mdai_mcp_server/ai_service.py
-
-# WebUIで即座にテスト可能
-# 手動再起動は不要
-```
-
-### 3. 直接APIテスト
-```bash
-# データモデル生成テスト
-curl -X POST http://localhost:3001/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "generate_data_model",
-    "params": {
-      "prompt": "ユーザー管理システムのデータモデル",
-      "project_context": {"name": "テストプロジェクト"}
-    },
-    "id": "test_generate"
-  }'
-```
-
-### 4. 手動再起動（必要な場合のみ）
-```bash
-# 自動リロードが効かない場合のみ
-pkill -f mdai-http-server
-uv run mdai-http-server
-```
-
-## 📁 プロジェクト構造
-
-```
-mcp-server/
-├── src/mdai_mcp_server/
-│   ├── __init__.py
-│   ├── server.py              # 標準MCPサーバー
-│   ├── http_server.py         # HTTP APIサーバー
-│   ├── start_http.py          # HTTPサーバー起動スクリプト（自動リロード対応）
-│   ├── ai_service.py          # AI統合サービス
-│   └── tools/
-│       ├── __init__.py
-│       └── model_generator.py # データモデル生成ツール
-├── tests/
-├── .env.example               # 環境変数テンプレート
-├── .env                       # 環境変数設定（作成必要）
-├── pyproject.toml             # プロジェクト設定
-└── README.md                  # このファイル
-```
-
-## 📖 関連ドキュメント
-
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [FastMCP Documentation](https://github.com/jlowin/fastmcp)
-- [統合設計書システム CLAUDE.md](../CLAUDE.md)
-
-## 🆘 サポート
-
-問題が発生した場合は、以下の情報とともにお問い合わせください：
-
-1. **サーバーログ**: MCPサーバーのコンソール出力
-2. **エラーメッセージ**: WebUIブラウザの開発者ツール
-3. **環境情報**: 
-   ```bash
-   uv --version
-   python --version
-   cat .env  # APIキーは除いて
-   ```
-4. **再現手順**: エラーが発生した操作の詳細
+- **[技術詳細・開発情報](./TECHNICAL.md)**: API仕様・デバッグ・アーキテクチャ
+- **[統合設計書システム](../CLAUDE.md)**: プロジェクト全体の概要
+- **[Model Context Protocol](https://modelcontextprotocol.io/)**: MCP標準仕様
+- **[GitHub Issue #8](https://github.com/akiraabe/mdai-designer/issues/8)**: MCP準拠性検証・改善計画

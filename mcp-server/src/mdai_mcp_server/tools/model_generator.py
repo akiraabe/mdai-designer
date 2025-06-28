@@ -1,7 +1,7 @@
 # src/mdai_mcp_server/tools/model_generator.py
 """
 データモデル生成ツール
-固定Mermaid返却による疎通確認用実装
+AI動的生成によるMermaid ER図とドキュメント生成
 """
 
 from typing import Dict, Optional, List
@@ -110,7 +110,7 @@ export AWS_REGION="us-west-2"
             "timestamp": datetime.now().isoformat(),
             "server_name": "mdai-model-server",
             "version": "0.1.0",
-            "mode": "fixed_response_testing"
+            "mode": "ai_dynamic_generation"
         }
         
         print("🏓 Pong response sent")
@@ -127,7 +127,8 @@ export AWS_REGION="us-west-2"
             "server_name": "MDAI MCP Server",
             "version": "0.1.0",
             "description": "データモデル設計書生成用MCPサーバー",
-            "mode": "fixed_response_testing",
+            "mode": "ai_dynamic_generation",
+            "ai_providers": ["openai", "bedrock"],
             "available_tools": [
                 "generate_data_model",
                 "ping", 
@@ -144,6 +145,6 @@ export AWS_REGION="us-west-2"
 
     # ツール登録完了をログ出力
     print("🛠️ Model generation tools registered:")
-    print("   - generate_data_model: データモデル生成（固定版）")
+    print("   - generate_data_model: AI動的データモデル生成（OpenAI/Bedrock）")
     print("   - ping: 疎通確認")
     print("   - get_server_info: サーバー情報取得")

@@ -26,7 +26,7 @@ setup_model_tools(app)
 def main():
     """MCPサーバーのエントリーポイント"""
     print("🚀 MDAI MCP Server starting...")
-    print("🔧 Mode: Fixed Mermaid Response (疎通確認用)")
+    print("🔧 Mode: AI Dynamic Generation (OpenAI/Bedrock)")
     print("📡 Running in stdio mode for MCP communication")
     
     try:
