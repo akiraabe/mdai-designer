@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 from .tools.model_generator import setup_model_tools
+from .tools.design_draft_generator import setup_design_draft_tools
 from .ai_service import ai_service
 
 # FastAPI アプリケーション
@@ -83,13 +84,57 @@ def register_tools():
         print("ℹ️ Server info response sent")
         return result
 
+    async def generate_design_draft(
+        prompt: str,
+        context: Optional[Dict] = None,
+        target_type: Optional[str] = None,
+        project_context: Optional[Dict] = None
+    ) -> Dict:
+        """設計書ドラフト生成ツール"""
+        return await ai_service.generate_design_draft(
+            prompt=prompt,
+            context=context or {},
+            target_type=target_type,
+            project_context=project_context
+        )
+
+    async def generate_chat_response(
+        user_message: str,
+        context: Optional[Dict] = None,
+        document_type: Optional[str] = None,
+        project_context: Optional[Dict] = None
+    ) -> Dict:
+        """チャット応答生成ツール"""
+        response = await ai_service.generate_chat_response(
+            user_message=user_message,
+            context=context or {},
+            document_type=document_type,
+            project_context=project_context
+        )
+        return {
+            "response": response,
+            "metadata": {
+                "generated_at": datetime.now().isoformat(),
+                "message_used": user_message,
+                "mode": "chat_response",
+                "document_type": document_type or "general",
+                "project_context": project_context,
+                "server_version": "0.1.0",
+                "generation_type": "ai_chat_response"
+            }
+        }
+
     # ツールを登録
     tools_registry["generate_data_model"] = generate_data_model
+    tools_registry["generate_design_draft"] = generate_design_draft
+    tools_registry["generate_chat_response"] = generate_chat_response
     tools_registry["ping"] = ping
     tools_registry["get_server_info"] = get_server_info
     
     print("🛠️ HTTP Server tools registered:")
-    print("   - generate_data_model: データモデル生成（固定版）")
+    print("   - generate_data_model: AI動的データモデル生成（OpenAI/Bedrock）")
+    print("   - generate_design_draft: AI動的設計書ドラフト生成（OpenAI/Bedrock）")
+    print("   - generate_chat_response: AI動的チャット応答生成（OpenAI/Bedrock）")
     print("   - ping: 疎通確認")
     print("   - get_server_info: サーバー情報取得")
 

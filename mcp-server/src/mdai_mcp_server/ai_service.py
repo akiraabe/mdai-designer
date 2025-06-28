@@ -342,6 +342,335 @@ erDiagram
         
         return supplement
     
+    async def generate_design_draft(
+        self,
+        prompt: str,
+        context: Dict[str, Any],
+        target_type: Optional[str] = None,
+        project_context: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """
+        設計書ドラフト生成（WebUIのaiServiceと同等機能）
+        """
+        
+        print(f"🎯 AI Design Draft Generation Request:")
+        print(f"   Prompt: {prompt[:100]}...")
+        print(f"   Target type: {target_type or 'auto-detect'}")
+        print(f"   Project: {project_context.get('name', '不明') if project_context else '不明'}")
+        
+        # ターゲットタイプの推定
+        if not target_type:
+            target_type = self._infer_target_type(prompt)
+        
+        # WebUIがブランクかどうかの判定
+        is_blank = self._is_webui_blank(context)
+        
+        # システムプロンプト作成
+        system_prompt = self._create_system_prompt(context, target_type, is_blank)
+        
+        try:
+            # AI応答を生成
+            ai_response = await self._generate_with_ai(system_prompt + "\n\n" + prompt)
+            
+            # レスポンスをパース
+            result = self._parse_ai_response(ai_response, prompt, target_type)
+            
+            result["metadata"] = {
+                "generated_at": datetime.now().isoformat(),
+                "prompt_used": prompt,
+                "mode": "ai_generated",
+                "target_type": target_type,
+                "project_context": project_context,
+                "server_version": "0.1.0",
+                "generation_type": "design_draft",
+                "ai_provider": self.ai_providers[0] if self.ai_providers else "none"
+            }
+            
+            print(f"✅ AI Design Draft Generated:")
+            if 'spreadsheetData' in result:
+                print(f"   Spreadsheet rows: {len(result['spreadsheetData'])}")
+            if 'markdownContent' in result:
+                print(f"   Markdown chars: {len(result['markdownContent'])}")
+            print(f"   Target type: {target_type}")
+            print(f"   AI Provider: {result['metadata']['ai_provider']}")
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ AI Design Draft Generation Error: {e}")
+            return await self._generate_fallback_design_draft(prompt, target_type, project_context)
+    
+    async def generate_chat_response(
+        self,
+        user_message: str,
+        context: Dict[str, Any],
+        document_type: Optional[str] = None,
+        project_context: Optional[Dict] = None
+    ) -> str:
+        """
+        チャット応答生成（WebUIのaiServiceと同等機能）
+        """
+        
+        print(f"🎯 AI Chat Response Generation Request:")
+        print(f"   Message: {user_message[:100]}...")
+        print(f"   Document type: {document_type or 'general'}")
+        print(f"   Project: {project_context.get('name', '不明') if project_context else '不明'}")
+        
+        # チャット用システムプロンプト作成
+        system_prompt = self._create_chat_system_prompt(context, document_type)
+        
+        try:
+            # AI応答を生成
+            response = await self._generate_with_ai(system_prompt + "\n\n" + user_message)
+            
+            print(f"✅ AI Chat Response Generated:")
+            print(f"   Response chars: {len(response)}")
+            print(f"   AI Provider: {self.ai_providers[0] if self.ai_providers else 'none'}")
+            
+            return response
+            
+        except Exception as e:
+            print(f"❌ AI Chat Response Generation Error: {e}")
+            return f"""申し訳ございません。チャット応答の生成中にエラーが発生しました。
+
+**エラー詳細**:
+- 発生日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- エラー内容: {str(e)}
+- メッセージ: {user_message}
+
+**対処方法**:
+1. AI API設定を確認してください
+2. ネットワーク接続を確認してください
+3. しばらく時間をおいて再度お試しください
+
+ご不便をおかけして申し訳ございません。"""
+    
+    def _infer_target_type(self, prompt: str) -> str:
+        """プロンプトから対象タイプを推定"""
+        prompt_lower = prompt.lower()
+        
+        if any(keyword in prompt_lower for keyword in ['画面', 'ui', 'ux', 'レイアウト', 'ページ']):
+            return 'screen'
+        elif any(keyword in prompt_lower for keyword in ['データ', 'モデル', 'テーブル', 'エンティティ', 'er']):
+            return 'model'
+        elif any(keyword in prompt_lower for keyword in ['api', 'endpoint', 'リクエスト', 'レスポンス']):
+            return 'api'
+        else:
+            return 'screen'  # デフォルト
+    
+    def _is_webui_blank(self, context: Dict[str, Any]) -> bool:
+        """WebUIがブランクかどうかの判定"""
+        if not context:
+            return True
+        
+        # スプレッドシートデータの確認
+        spreadsheet_data = context.get('spreadsheetData', [])
+        if spreadsheet_data and len(spreadsheet_data) > 0:
+            # 空でない項目があるかチェック
+            for row in spreadsheet_data:
+                if row.get('項目名') and row.get('項目名').strip():
+                    return False
+        
+        # Markdownコンテンツの確認
+        markdown_content = context.get('markdownContent', '')
+        if markdown_content and markdown_content.strip():
+            return False
+        
+        return True
+    
+    def _create_system_prompt(self, context: Dict[str, Any], target_type: str, is_blank: bool) -> str:
+        """システムプロンプト作成"""
+        
+        if target_type == 'screen':
+            return f"""あなたは画面設計書の専門家です。以下の要求に対して、画面設計書を生成してください。
+
+{'【新規作成モード】' if is_blank else '【追加・修正モード】'}
+
+出力形式は以下のJSON形式で応答してください：
+{{
+  "spreadsheetData": [
+    {{"項目名": "項目名", "データ型": "データ型", "必須": "○/×", "説明": "詳細説明"}},
+    ...
+  ],
+  "markdownContent": "# 画面設計書\\n\\n## 表示条件\\n..."
+}}
+
+現在の設計書状況:
+- スプレッドシートデータ: {len(context.get('spreadsheetData', []))}行
+- Markdownコンテンツ: {len(context.get('markdownContent', ''))}文字
+
+画面設計書として必要な要素を含めてください：
+- 表示条件
+- 項目定義（スプレッドシート形式）
+- 画面イメージ（テキスト説明）
+- 補足説明"""
+        
+        elif target_type == 'api':
+            return f"""あなたはAPI設計書の専門家です。以下の要求に対して、API設計書を生成してください。
+
+{'【新規作成モード】' if is_blank else '【追加・修正モード】'}
+
+出力形式は以下のJSON形式で応答してください：
+{{
+  "spreadsheetData": [
+    {{"項目名": "パラメータ名", "データ型": "データ型", "必須": "○/×", "説明": "詳細説明"}},
+    ...
+  ],
+  "markdownContent": "# API設計書\\n\\n## エンドポイント\\n..."
+}}
+
+API設計書として必要な要素を含めてください：
+- エンドポイント定義
+- リクエスト/レスポンス仕様
+- パラメータ定義（スプレッドシート形式）
+- エラーハンドリング"""
+        
+        else:  # model
+            return f"""あなたはデータモデル設計書の専門家です。以下の要求に対して、データモデル設計書を生成してください。
+
+{'【新規作成モード】' if is_blank else '【追加・修正モード】'}
+
+出力形式は以下のJSON形式で応答してください：
+{{
+  "spreadsheetData": [
+    {{"項目名": "フィールド名", "データ型": "データ型", "必須": "○/×", "説明": "詳細説明"}},
+    ...
+  ],
+  "markdownContent": "# データモデル設計書\\n\\n## エンティティ定義\\n..."
+}}
+
+データモデル設計書として必要な要素を含めてください：
+- エンティティ定義
+- フィールド定義（スプレッドシート形式）
+- リレーション定義
+- 制約条件"""
+    
+    def _create_chat_system_prompt(self, context: Dict[str, Any], document_type: Optional[str]) -> str:
+        """チャット用システムプロンプト作成"""
+        
+        doc_type_name = {
+            'screen': '画面設計書',
+            'model': 'データモデル設計書',
+            'api': 'API設計書'
+        }.get(document_type, '設計書')
+        
+        return f"""あなたは{doc_type_name}の専門家です。
+ユーザーの質問に対して、現在の設計書の内容を踏まえて回答してください。
+
+現在の設計書状況:
+- スプレッドシートデータ: {len(context.get('spreadsheetData', []))}行
+- Markdownコンテンツ: {len(context.get('markdownContent', ''))}文字
+- Mermaidコード: {len(context.get('mermaidCode', ''))}文字
+
+回答時の注意点:
+- 技術的に正確な情報を提供
+- 具体的で実用的なアドバイス
+- 現在の設計書との整合性を考慮
+- 日本語で分かりやすく説明"""
+    
+    def _parse_ai_response(self, ai_response: str, prompt: str, target_type: str) -> Dict[str, Any]:
+        """AI応答をパースして構造化データに変換"""
+        
+        # JSON形式の応答を抽出
+        json_match = re.search(r'\{[\s\S]*\}', ai_response)
+        if json_match:
+            try:
+                parsed_data = json.loads(json_match.group(0))
+                if 'spreadsheetData' in parsed_data and 'markdownContent' in parsed_data:
+                    return parsed_data
+            except json.JSONDecodeError:
+                pass
+        
+        # JSON抽出失敗時はテキストから生成
+        return self._extract_from_text(ai_response, target_type)
+    
+    def _extract_from_text(self, text: str, target_type: str) -> Dict[str, Any]:
+        """テキストから設計書データを抽出"""
+        
+        # 基本的なスプレッドシートデータを生成
+        if target_type == 'screen':
+            spreadsheet_data = [
+                {"項目名": "ユーザーID", "データ型": "string", "必須": "○", "説明": "ユーザーを識別するID"},
+                {"項目名": "ユーザー名", "データ型": "string", "必須": "○", "説明": "表示用のユーザー名"},
+                {"項目名": "メールアドレス", "データ型": "email", "必須": "○", "説明": "ログイン用メールアドレス"}
+            ]
+        elif target_type == 'api':
+            spreadsheet_data = [
+                {"項目名": "user_id", "データ型": "string", "必須": "○", "説明": "ユーザーID"},
+                {"項目名": "name", "データ型": "string", "必須": "○", "説明": "ユーザー名"},
+                {"項目名": "email", "データ型": "string", "必須": "○", "説明": "メールアドレス"}
+            ]
+        else:  # model
+            spreadsheet_data = [
+                {"項目名": "id", "データ型": "bigint", "必須": "○", "説明": "プライマリキー"},
+                {"項目名": "name", "データ型": "varchar(255)", "必須": "○", "説明": "名前"},
+                {"項目名": "created_at", "データ型": "timestamp", "必須": "○", "説明": "作成日時"}
+            ]
+        
+        # Markdownコンテンツを生成
+        markdown_content = f"""# {target_type.title()}設計書
+
+## 概要
+{text[:200]}...
+
+## 生成情報
+- 生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- 生成方式: AI動的生成（MCP Server）
+
+## 詳細
+AI生成による基本的な設計書です。必要に応じて項目を追加・修正してください。
+"""
+        
+        return {
+            "spreadsheetData": spreadsheet_data,
+            "markdownContent": markdown_content
+        }
+    
+    async def _generate_fallback_design_draft(
+        self,
+        prompt: str,
+        target_type: str,
+        project_context: Optional[Dict]
+    ) -> Dict[str, Any]:
+        """AI生成失敗時のフォールバック設計書ドラフト"""
+        
+        spreadsheet_data = [
+            {"項目名": "エラー", "データ型": "string", "必須": "○", "説明": f"生成エラー: AI APIに接続できませんでした"}
+        ]
+        
+        markdown_content = f"""# {target_type.title()}設計書（フォールバック）
+
+## ⚠️ 生成エラー
+AI生成に失敗したため、基本的な設計書を表示しています。
+
+### エラー詳細
+- 発生日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- プロンプト: {prompt}
+- 対象タイプ: {target_type}
+
+### 対処方法
+1. AI API設定を確認してください
+2. ネットワーク接続を確認してください
+3. しばらく時間をおいて再度お試しください
+
+AI生成の復旧後、再度生成要求を送信してください。
+"""
+        
+        return {
+            "spreadsheetData": spreadsheet_data,
+            "markdownContent": markdown_content,
+            "metadata": {
+                "generated_at": datetime.now().isoformat(),
+                "prompt_used": prompt,
+                "mode": "fallback",
+                "target_type": target_type,
+                "project_context": project_context,
+                "server_version": "0.1.0",
+                "generation_type": "fallback_design_draft",
+                "ai_provider": "none"
+            }
+        }
+    
     async def _generate_fallback_data(
         self, 
         prompt: str, 

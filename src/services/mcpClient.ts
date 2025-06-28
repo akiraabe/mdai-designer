@@ -42,6 +42,58 @@ interface DataModelGenerationResult {
   };
 }
 
+interface DesignDraftGenerationRequest {
+  prompt: string;
+  context?: any;
+  target_type?: string;
+  project_context?: {
+    name: string;
+    id: string;
+  };
+}
+
+interface DesignDraftGenerationResult {
+  spreadsheetData: Array<{
+    項目名: string;
+    データ型: string;
+    必須: string;
+    説明: string;
+  }>;
+  markdownContent: string;
+  metadata: {
+    generated_at: string;
+    prompt_used: string;
+    mode: string;
+    target_type: string;
+    project_context?: any;
+    server_version: string;
+    generation_type: string;
+  };
+}
+
+interface ChatResponseRequest {
+  user_message: string;
+  context?: any;
+  document_type?: string;
+  project_context?: {
+    name: string;
+    id: string;
+  };
+}
+
+interface ChatResponseResult {
+  response: string;
+  metadata: {
+    generated_at: string;
+    message_used: string;
+    mode: string;
+    document_type: string;
+    project_context?: any;
+    server_version: string;
+    generation_type: string;
+  };
+}
+
 export class MCPClientService {
   private baseUrl: string;
   
@@ -113,6 +165,60 @@ export class MCPClientService {
       return response.result;
     } catch (error) {
       console.error('❌ データモデル生成失敗:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 設計書ドラフト生成要求
+   */
+  async generateDesignDraft(params: DesignDraftGenerationRequest): Promise<DesignDraftGenerationResult> {
+    console.log('🔄 設計書ドラフト生成要求:', params);
+    
+    const request: MCPRequest = {
+      method: 'generate_design_draft',
+      params: {
+        prompt: params.prompt,
+        context: params.context,
+        target_type: params.target_type,
+        project_context: params.project_context
+      },
+      id: `draft_${Date.now()}`
+    };
+
+    try {
+      const response = await this.sendRequest(request);
+      console.log('✅ 設計書ドラフト生成完了:', response.result);
+      return response.result;
+    } catch (error) {
+      console.error('❌ 設計書ドラフト生成失敗:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * チャット応答生成要求
+   */
+  async generateChatResponse(params: ChatResponseRequest): Promise<ChatResponseResult> {
+    console.log('🔄 チャット応答生成要求:', params);
+    
+    const request: MCPRequest = {
+      method: 'generate_chat_response',
+      params: {
+        user_message: params.user_message,
+        context: params.context,
+        document_type: params.document_type,
+        project_context: params.project_context
+      },
+      id: `chat_${Date.now()}`
+    };
+
+    try {
+      const response = await this.sendRequest(request);
+      console.log('✅ チャット応答生成完了:', response.result);
+      return response.result;
+    } catch (error) {
+      console.error('❌ チャット応答生成失敗:', error);
       throw error;
     }
   }
