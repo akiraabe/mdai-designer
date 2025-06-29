@@ -4,7 +4,6 @@
 import React, { useState } from 'react';
 import { BaseChatPanel, type ChatMessage } from './BaseChatPanel';
 import { ChatMessageActions } from './ChatMessage';
-// import { generateChatResponse } from '../../services/aiService'; // MCPサーバー経由に変更
 import { ModificationService } from '../../services/modificationService';
 import { DocumentReferenceService } from '../../services/documentReferenceService';
 import { mcpClient } from '../../services/mcpClient';
@@ -311,21 +310,8 @@ export const ModelChatPanel: React.FC<ModelChatPanelProps> = ({
         } catch (error) {
           console.error('❌ MCP生成エラー:', error);
           
-          // MCPサーバーエラー時は従来のAI生成にフォールバック
-          console.log('🔄 従来のAI生成にフォールバック');
-          const fallbackPrompt = `【データモデル設計書専用】\n指示: ${userMessage}\n\n【必須】erDiagramで始まるMermaid記法で応答してください。`;
-          const mermaidResponse = await generateChatResponse(fallbackPrompt, currentData);
-          
-          const mermaidMatch = mermaidResponse.match(/```(?:mermaid)?\s*(erDiagram[\s\S]*?)```/i) || 
-                              mermaidResponse.match(/(erDiagram[\s\S]*)/i);
-          
-          if (mermaidMatch) {
-            const mermaidCodeGenerated = mermaidMatch[1].trim();
-            onMermaidCodeUpdate(mermaidCodeGenerated);
-            return `🎨 **ER図を生成しました（フォールバック）**\n\n⚠️ MCPサーバーに接続できないため、従来のAI生成を使用しました\n📊 「データモデル」タブで確認してください`;
-          } else {
-            return `❌ MCPサーバーとの通信に失敗し、フォールバック生成も失敗しました。\n\n**エラー**: ${error instanceof Error ? error.message : '不明'}\n\n**対処法**: MCPサーバーが起動しているか確認してください。`;
-          }
+          // MCPサーバーエラー時はエラーメッセージを返す（完全MCP化）
+          return `❌ **データモデル生成に失敗しました**\n\n**エラー**: ${error instanceof Error ? error.message : '不明'}\n\n**対処法**: \n1. MCPサーバーが起動しているか確認してください\n2. インターネット接続を確認してください\n3. 時間をおいて再試行してください`;
         }
       }
 

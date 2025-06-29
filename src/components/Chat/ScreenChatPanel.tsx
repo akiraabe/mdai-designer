@@ -4,7 +4,6 @@
 import React, { useState } from 'react';
 import { BaseChatPanel, type ChatMessage } from './BaseChatPanel';
 import { ChatMessageActions } from './ChatMessage';
-// import { generateDesignDraft, generateChatResponse } from '../../services/aiService'; // MCPサーバー経由に変更
 import { mcpClient } from '../../services/mcpClient';
 import { ModificationService } from '../../services/modificationService';
 import { DocumentReferenceService } from '../../services/documentReferenceService';

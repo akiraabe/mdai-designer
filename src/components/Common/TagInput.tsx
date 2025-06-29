@@ -1,7 +1,7 @@
 // src/components/Common/TagInput.tsx
 // タグ入力・表示コンポーネント
 
-import React, { useState, KeyboardEvent } from 'react';
+import React, { useState, type KeyboardEvent } from 'react';
 import { X, Tag } from 'lucide-react';
 
 interface TagInputProps {

@@ -53,6 +53,7 @@ interface DesignDraftGenerationRequest {
 }
 
 interface DesignDraftGenerationResult {
+  type: 'spreadsheet' | 'conditions' | 'supplement' | 'mixed';
   spreadsheetData: Array<{
     項目名: string;
     データ型: string;
@@ -139,10 +140,8 @@ interface ModificationProposalResult {
 }
 
 export class MCPClientService {
-  private baseUrl: string;
-  
-  constructor(baseUrl: string = 'http://localhost:3001') {
-    this.baseUrl = baseUrl;
+  constructor() {
+    // MCP通信は/api/mcp経由で行う
   }
 
   /**

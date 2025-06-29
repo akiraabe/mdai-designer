@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import type { Document } from '../types';
-import { convertProjectToMarkdown } from './markdownExport';
+// import { convertProjectToMarkdown } from './markdownExport'; // 現在未使用
 
 /**
  * プロジェクトをMarkdown+画像のZIPファイルとしてエクスポート

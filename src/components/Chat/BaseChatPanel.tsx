@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
-import { checkAPIKey } from '../../services/aiService';
+import { mcpClient } from '../../services/mcpClient';
 import type { ModificationProposal } from '../../types/aiTypes';
 import type { DocumentReference } from '../../services/documentReferenceService';
 import { MentionSuggestions } from './MentionSuggestions';
@@ -72,8 +72,17 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
   
   // 最もシンプルなアプローチ：最適化なしで直接渡す
   
-  // APIキーの存在確認
-  const hasAPIKey = checkAPIKey();
+  // MCPサーバーの接続確認（APIキーの代替）
+  const [hasMCPConnection, setHasMCPConnection] = useState(true);
+  
+  useEffect(() => {
+    const checkMCPConnection = async () => {
+      const isConnected = await mcpClient.healthCheck();
+      setHasMCPConnection(isConnected);
+    };
+    
+    checkMCPConnection();
+  }, []);
 
   // @メンション検知とポジション計算
   const detectMention = useCallback((value: string, cursorPosition: number) => {
@@ -326,15 +335,15 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
         borderRadius: '12px 12px 0 0'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {hasAPIKey ? (
+          {hasMCPConnection ? (
             <Sparkles className="h-4 w-4 text-purple-600" />
           ) : (
             <MessageCircle className="h-4 w-4 text-blue-600" />
           )}
           <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-            {hasAPIKey ? chatTitle : '設計アシスタント'}
+            {hasMCPConnection ? chatTitle : '設計アシスタント'}
           </h3>
-          {hasAPIKey && (
+          {hasMCPConnection && (
             <span style={{ 
               fontSize: '10px', 
               backgroundColor: '#dcfce7', 
