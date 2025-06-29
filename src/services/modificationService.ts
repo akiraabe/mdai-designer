@@ -19,7 +19,7 @@ export class ModificationService {
     currentData: WebUIData
   ): Promise<ModificationProposal> {
     const timestamp = Date.now();
-    const proposalId = `mod_${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+    const proposalId = `mod_${timestamp}_${Math.random().toString(36).substring(2, 11)}`;
     
     console.log('🔍 修正提案生成開始:', changeDescription);
     
@@ -60,7 +60,7 @@ export class ModificationService {
    */
   private static createModificationSystemPrompt(currentData: WebUIData): string {
     return `
-あなたは設計書修正の専門家です。ユーザーの変更要求を分析し、現在の設計書をどう修正すべきか具体的な提案をしてください。
+あなたは設計書修正の専門家です。ユーザーの変更要求を分析し、現在の設計書をどう修正すべきか詳細で包括的な提案をしてください。
 
 現在の設計書状況:
 - 表示条件: ${currentData.conditionsMarkdown?.length || 0}文字
@@ -82,12 +82,20 @@ ${currentData.mermaidCode || '（未設定）'}
   "summary": "変更概要の簡潔な説明",
   "changes": [
     {
-      "target": "conditions",
+      "target": "spreadsheet",
       "action": "add", 
+      "location": "新規行として追加",
+      "newContent": "項目名\\tデータ型\\t必須\\t説明\\nリスクランク\\tselect(高,中,低)\\tyes\\tリスクの度合いを3段階で評価",
+      "reason": "新しい項目定義を追加するため",
+      "confidence": 0.95
+    },
+    {
+      "target": "supplement",
+      "action": "add",
       "location": "末尾",
-      "newContent": "追加する具体的な内容",
-      "reason": "変更理由",
-      "confidence": 0.85
+      "newContent": "## リスクランク項目について\\n\\nリスクランク項目は、各機能や操作に伴うリスクレベルを可視化するために追加されました。\\n\\n- **高**: 重大な影響を与える可能性がある\\n- **中**: 中程度の影響が予想される\\n- **低**: 軽微な影響に留まる\\n\\nこの項目により、開発・運用時のリスク管理が効率化されます。",
+      "reason": "新規項目の説明と運用指針を補足するため",
+      "confidence": 0.90
     }
   ],
   "risks": ["潜在的なリスク1", "潜在的なリスク2"]
@@ -96,10 +104,37 @@ ${currentData.mermaidCode || '（未設定）'}
 
 ## 重要な指針
 1. **JSON形式必須**: 上記の形式以外では応答しないでください
-2. **ターゲット指定**: target は "conditions", "supplement", "spreadsheet", "mermaid" のみ使用
-3. **安全性優先**: 既存データを壊さない修正方法を提案
-4. **具体性**: 変更位置と内容を明確に指定
-5. **理由明示**: なぜその変更が必要かを説明
+2. **包括的提案**: 単一項目の追加でも、スプレッドシート定義と補足説明の両方を提案してください
+3. **詳細なスプレッドシート**: 項目名、データ型、必須フラグ、説明を必ず含めてください
+4. **意味のある補足**: 新機能の意図、使用方法、運用上の注意点を補足説明に含めてください
+5. **ターゲット指定**: target は "conditions", "supplement", "spreadsheet", "mermaid" のみ使用
+6. **安全性優先**: 既存データを壊さない修正方法を提案
+7. **具体性**: 変更位置と内容を明確に指定
+8. **理由明示**: なぜその変更が必要かを説明
+
+## スプレッドシート項目定義の形式
+スプレッドシート追加時は以下の形式で newContent を作成してください：
+\`\`\`
+項目名\\tデータ型\\t必須\\t説明\\n
+実際の項目名\\t適切なデータ型\\tyes/no\\t詳細な説明文
+\`\`\`
+
+例：
+\`\`\`
+ユーザーID\\tstring\\tyes\\t一意のユーザー識別子
+ユーザー名\\tstring\\tyes\\t表示用のユーザー名（最大50文字）
+メールアドレス\\temail\\tyes\\t連絡用メールアドレス
+登録日時\\tdatetime\\tyes\\tユーザー登録完了日時
+\`\`\`
+
+## 補足説明の充実化
+新機能や項目を追加する場合、以下の観点で補足説明を作成してください：
+- 機能の目的と背景
+- 使用場面・タイミング
+- 入力値の制約・ルール
+- 他の項目との関連性
+- 運用上の注意点
+- セキュリティ考慮事項（該当する場合）
 
 ## Mermaid ER図記法（mermaidターゲット使用時）
 ER図、データモデル、エンティティ関係に関する要求の場合は target: "mermaid" を使用し、以下の記法で記述してください：
@@ -174,14 +209,14 @@ erDiagram
       const parsedData = JSON.parse(jsonMatch[1]);
       
       // 提案データの検証と正規化
-      const changes: ProposedChange[] = (parsedData.changes || []).map((change: any) => ({
-        target: change.target || 'conditions',
-        action: change.action || 'modify',
-        location: change.location || '',
-        originalContent: change.originalContent || '',
-        newContent: change.newContent || '',
-        reason: change.reason || '理由不明',
-        confidence: Math.min(Math.max(change.confidence || 0.5, 0), 1)
+      const changes: ProposedChange[] = (parsedData.changes || []).map((change: Record<string, unknown>) => ({
+        target: (change.target as string) || 'conditions',
+        action: (change.action as string) || 'modify',
+        location: (change.location as string) || '',
+        originalContent: (change.originalContent as string) || '',
+        newContent: (change.newContent as string) || '',
+        reason: (change.reason as string) || '理由不明',
+        confidence: Math.min(Math.max((change.confidence as number) || 0.5, 0), 1)
       }));
       
       return {
@@ -310,31 +345,38 @@ erDiagram
     const currentContent = data[field] || '';
     
     switch (change.action) {
-      case 'add':
-        // ハイライト付きで追加
-        const highlightedContent = `**[DRAFT]** ${change.newContent} **(AI追加)**`;
-        data[field] = currentContent + '\n\n' + highlightedContent;
+      case 'add': {
+        // 見た目に分かりやすく、データとしてもクリーンな形式
+        const timestamp = new Date().toLocaleString('ja-JP');
+        const addedContent = `---\n**🤖 AI追加提案 (${timestamp})**\n\n${change.newContent}\n\n---`;
+        data[field] = currentContent + (currentContent ? '\n\n' : '') + addedContent;
         break;
+      }
         
-      case 'modify':
+      case 'modify': {
         if (change.originalContent && currentContent.includes(change.originalContent)) {
-          // 既存内容を置換（ハイライト付き）
-          const modifiedContent = `**[DRAFT]** ${change.newContent} **(AI修正)**`;
+          // 既存内容を置換（視覚的に分かりやすく）
+          const timestamp = new Date().toLocaleString('ja-JP');
+          const modifiedContent = `---\n**🔄 AI修正提案 (${timestamp})**\n\n${change.newContent}\n\n---`;
           data[field] = currentContent.replace(change.originalContent, modifiedContent);
         } else {
           // 見つからない場合は末尾に追加
-          const highlightedContent = `**[DRAFT]** ${change.newContent} **(AI修正)**`;
-          data[field] = currentContent + '\n\n' + highlightedContent;
+          const timestamp = new Date().toLocaleString('ja-JP');
+          const addedContent = `---\n**🔄 AI修正提案 (${timestamp})**\n\n${change.newContent}\n\n---`;
+          data[field] = currentContent + (currentContent ? '\n\n' : '') + addedContent;
         }
         break;
+      }
         
-      case 'delete':
+      case 'delete': {
         if (change.originalContent && currentContent.includes(change.originalContent)) {
           // 削除マーカー付きで残す
-          const deletionMarker = `~~${change.originalContent}~~ **(AI削除提案)**`;
+          const timestamp = new Date().toLocaleString('ja-JP');
+          const deletionMarker = `---\n**🗑️ AI削除提案 (${timestamp})**\n\n~~${change.originalContent}~~\n\n---`;
           data[field] = currentContent.replace(change.originalContent, deletionMarker);
         }
         break;
+      }
     }
   }
 
@@ -385,41 +427,95 @@ erDiagram
   }
 
   /**
-   * スプレッドシートの変更を適用（基本実装）
+   * スプレッドシートの変更を適用（改善版）
    */
   private static applySpreadsheetChange(change: ProposedChange, data: WebUIData): void {
-    // スプレッドシートの変更は複雑なため、基本的な実装のみ
-    // 詳細は今後のフェーズで拡張
-    
     if (!data.spreadsheetData || data.spreadsheetData.length === 0) {
       data.spreadsheetData = [{
         name: 'AI修正シート',
         celldata: [],
         row: 1,
-        column: 1
+        column: 4  // 項目名、データ型、必須、説明の4列
       }];
     }
     
-    // 簡単な追加処理（行の末尾に追加）
     if (change.action === 'add') {
       const sheet = data.spreadsheetData[0];
-      const nextRow = (sheet.celldata || []).length > 0 
-        ? Math.max(...sheet.celldata.map((cell: any) => cell.r)) + 1 
-        : 0;
-      
-      // 新しいセルを追加（仮実装）
-      const newCell = {
-        r: nextRow,
-        c: 0,
-        v: { 
-          v: `[DRAFT] ${change.newContent}`,
-          ct: { t: 'inlineStr' }
-        }
-      };
-      
       sheet.celldata = sheet.celldata || [];
-      sheet.celldata.push(newCell);
-      sheet.row = Math.max(sheet.row || 1, nextRow + 1);
+      
+      // 現在の最大行数を取得
+      const maxRow = sheet.celldata.length > 0 
+        ? Math.max(...sheet.celldata.map((cell: { r: number }) => cell.r)) 
+        : -1;
+      const nextRow = maxRow + 1;
+      
+      // タブ区切りデータを解析
+      const lines = change.newContent.split('\n').filter(line => line.trim());
+      
+      // ヘッダー行の存在を確認
+      const hasHeader = lines.length > 0 && lines[0].includes('項目名\t') && lines[0].includes('データ型\t');
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      
+      // 各データ行を処理
+      dataLines.forEach((line, index) => {
+        // タブ区切りで分割
+        const columns = line.split('\t');
+        if (columns.length >= 4) {
+          const currentRow = nextRow + index;
+          
+          // 各列にセルを追加（Fortune-Sheet形式）
+          const cellsToAdd = [
+            { // 項目名
+              r: currentRow,
+              c: 0,
+              v: { 
+                v: columns[0].trim(),
+                ct: { t: 'inlineStr' },
+                m: columns[0].trim()
+              }
+            },
+            { // データ型
+              r: currentRow,
+              c: 1,
+              v: { 
+                v: columns[1].trim(),
+                ct: { t: 'inlineStr' },
+                m: columns[1].trim()
+              }
+            },
+            { // 必須
+              r: currentRow,
+              c: 2,
+              v: { 
+                v: columns[2].trim(),
+                ct: { t: 'inlineStr' },
+                m: columns[2].trim()
+              }
+            },
+            { // 説明
+              r: currentRow,
+              c: 3,
+              v: { 
+                v: columns[3].trim(),
+                ct: { t: 'inlineStr' },
+                m: columns[3].trim()
+              }
+            }
+          ];
+          
+          // セルデータに追加
+          sheet.celldata.push(...cellsToAdd);
+        }
+      });
+      
+      // シートの行数と列数を正確に更新
+      if (dataLines.length > 0) {
+        const totalRows = nextRow + dataLines.length;
+        sheet.row = Math.max(sheet.row || 1, totalRows);
+        sheet.column = Math.max(sheet.column || 4, 4);
+      }
+      
+      console.log(`✅ スプレッドシートに${lines.length}行追加完了`);
     }
   }
 
