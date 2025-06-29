@@ -94,6 +94,50 @@ interface ChatResponseResult {
   };
 }
 
+interface MockupHtmlRequest {
+  prompt: string;
+  context?: any;
+  project_context?: {
+    name: string;
+    id: string;
+  };
+}
+
+interface MockupHtmlResult {
+  html: string;
+  metadata: {
+    generated_at: string;
+    prompt_used: string;
+    mode: string;
+    project_context?: any;
+    server_version: string;
+    generation_type: string;
+  };
+}
+
+interface ModificationProposalRequest {
+  system_prompt: string;
+  user_prompt: string;
+  context?: any;
+  project_context?: {
+    name: string;
+    id: string;
+  };
+}
+
+interface ModificationProposalResult {
+  response: string;
+  metadata: {
+    generated_at: string;
+    system_prompt_used: string;
+    user_prompt_used: string;
+    mode: string;
+    project_context?: any;
+    server_version: string;
+    generation_type: string;
+  };
+}
+
 export class MCPClientService {
   private baseUrl: string;
   
@@ -253,6 +297,59 @@ export class MCPClientService {
       return mcpResponse;
     } catch (error) {
       console.error('🚫 MCP通信エラー:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * HTML画面イメージ生成要求
+   */
+  async generateMockupHtml(params: MockupHtmlRequest): Promise<MockupHtmlResult> {
+    console.log('🔄 HTML画面イメージ生成要求:', params);
+    
+    const request: MCPRequest = {
+      method: 'generate_mockup_html',
+      params: {
+        prompt: params.prompt,
+        context: params.context,
+        project_context: params.project_context
+      },
+      id: `mockup_${Date.now()}`
+    };
+
+    try {
+      const response = await this.sendRequest(request);
+      console.log('✅ HTML画面イメージ生成完了:', response.result);
+      return response.result;
+    } catch (error) {
+      console.error('❌ HTML画面イメージ生成失敗:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 修正提案生成要求
+   */
+  async generateModificationProposal(params: ModificationProposalRequest): Promise<ModificationProposalResult> {
+    console.log('🔄 修正提案生成要求:', params);
+    
+    const request: MCPRequest = {
+      method: 'generate_modification_proposal',
+      params: {
+        system_prompt: params.system_prompt,
+        user_prompt: params.user_prompt,
+        context: params.context,
+        project_context: params.project_context
+      },
+      id: `modification_${Date.now()}`
+    };
+
+    try {
+      const response = await this.sendRequest(request);
+      console.log('✅ 修正提案生成完了:', response.result);
+      return response.result;
+    } catch (error) {
+      console.error('❌ 修正提案生成失敗:', error);
       throw error;
     }
   }

@@ -124,10 +124,61 @@ def register_tools():
             }
         }
 
+    async def generate_mockup_html(
+        prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> Dict:
+        """HTML画面イメージ生成ツール"""
+        html_result = await ai_service.generate_mockup_html(
+            prompt=prompt,
+            context=context or {},
+            project_context=project_context
+        )
+        return {
+            "html": html_result,
+            "metadata": {
+                "generated_at": datetime.now().isoformat(),
+                "prompt_used": prompt,
+                "mode": "mockup_html",
+                "project_context": project_context,
+                "server_version": "0.1.0",
+                "generation_type": "ai_mockup_html"
+            }
+        }
+
+    async def generate_modification_proposal(
+        system_prompt: str,
+        user_prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> Dict:
+        """修正提案生成ツール"""
+        proposal_result = await ai_service.generate_modification_proposal(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            context=context or {},
+            project_context=project_context
+        )
+        return {
+            "response": proposal_result,
+            "metadata": {
+                "generated_at": datetime.now().isoformat(),
+                "system_prompt_used": system_prompt,
+                "user_prompt_used": user_prompt,
+                "mode": "modification_proposal",
+                "project_context": project_context,
+                "server_version": "0.1.0",
+                "generation_type": "ai_modification_proposal"
+            }
+        }
+
     # ツールを登録
     tools_registry["generate_data_model"] = generate_data_model
     tools_registry["generate_design_draft"] = generate_design_draft
     tools_registry["generate_chat_response"] = generate_chat_response
+    tools_registry["generate_mockup_html"] = generate_mockup_html
+    tools_registry["generate_modification_proposal"] = generate_modification_proposal
     tools_registry["ping"] = ping
     tools_registry["get_server_info"] = get_server_info
     
@@ -135,6 +186,8 @@ def register_tools():
     print("   - generate_data_model: AI動的データモデル生成（OpenAI/Bedrock）")
     print("   - generate_design_draft: AI動的設計書ドラフト生成（OpenAI/Bedrock）")
     print("   - generate_chat_response: AI動的チャット応答生成（OpenAI/Bedrock）")
+    print("   - generate_mockup_html: AI画面イメージHTML+CSS生成（OpenAI/Bedrock）")
+    print("   - generate_modification_proposal: AI修正提案生成（OpenAI/Bedrock）")
     print("   - ping: 疎通確認")
     print("   - get_server_info: サーバー情報取得")
 

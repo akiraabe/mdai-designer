@@ -398,6 +398,17 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
     return { processedMessage, context: contextInfo };
   };
 
+  // 既存データの存在チェック
+  const hasExistingData = (data: WebUIData): boolean => {
+    const hasConditions = data.conditionsMarkdown && data.conditionsMarkdown.trim().length > 0;
+    const hasSpreadsheet = data.spreadsheetData && data.spreadsheetData.length > 0 && 
+                          data.spreadsheetData[0]?.celldata && data.spreadsheetData[0].celldata.length > 0;
+    const hasSuplement = data.supplementMarkdown && data.supplementMarkdown.trim().length > 0;
+    const hasMockup = data.mockupImage && data.mockupImage.length > 0;
+    
+    return hasConditions || hasSpreadsheet || hasSuplement || hasMockup;
+  };
+
   // AI統合応答機能（Model Driven Architecture対応）
   const getAIResponse = async (userMessage: string): Promise<string> => {
     const currentData: WebUIData = {
@@ -426,25 +437,44 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
       }
 
       // 修正提案の場合
-      if (isModificationRequest(processedMessage)) {
+      const isModification = isModificationRequest(processedMessage);
+      const isScreenDesign = isScreenDesignRequest(processedMessage);
+      
+      console.log('🔍 メッセージ判定デバッグ:', {
+        message: processedMessage,
+        isModification,
+        isScreenDesign,
+        hasModelReference
+      });
+      
+      if (isModification) {
         console.log('🎯 画面設計書修正提案要求として認識:', processedMessage);
-        const proposal = await ModificationService.generateModificationProposal(processedMessage, currentData);
         
-        // 修正提案をメッセージとして追加
-        const proposalMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          content: `🎯 **修正提案を生成しました**\n\n📋 **概要**: ${proposal.summary}\n\n🔧 **提案された変更**:\n${proposal.changes.map(change => 
-            `- **${change.target}** (${change.action}): ${change.reason} (信頼度: ${(change.confidence * 100).toFixed(0)}%)`
-          ).join('\n')}\n\n⚠️ **注意事項**:\n${proposal.risks.map(risk => `- ${risk}`).join('\n')}\n\n**この提案を適用しますか？**`,
-          isUser: false,
-          timestamp: new Date(),
-          type: 'proposal',
-          proposal
-        };
-        
-        setMessages(prev => [...prev, proposalMessage]);
-        
-        return '修正提案を確認してください。適用する場合は「適用」ボタンをクリックしてください。';
+        try {
+          const proposal = await ModificationService.generateModificationProposal(processedMessage, currentData);
+          
+          // 修正提案をメッセージとして追加
+          const proposalMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: `🎯 **修正提案を生成しました**\n\n📋 **概要**: ${proposal.summary}\n\n🔧 **提案された変更**:\n${proposal.changes.map(change => 
+              `- **${change.target}** (${change.action}): ${change.reason} (信頼度: ${(change.confidence * 100).toFixed(0)}%)`
+            ).join('\n')}\n\n⚠️ **注意事項**:\n${proposal.risks.map(risk => `- ${risk}`).join('\n')}\n\n**この提案を適用しますか？**`,
+            isUser: false,
+            timestamp: new Date(),
+            type: 'proposal',
+            proposal
+          };
+          
+          setMessages(prev => [...prev, proposalMessage]);
+          
+          return '修正提案を確認してください。適用する場合は「適用」ボタンをクリックしてください。';
+          
+        } catch (modificationError) {
+          console.error('❌ 修正提案生成失敗:', modificationError);
+          
+          // 修正提案生成に失敗した場合は、エラーメッセージを返して処理を終了
+          return `❌ **修正提案生成エラー**\n\nMCP修正提案システムとの通信に失敗しました。\n\n**エラー**: ${modificationError instanceof Error ? modificationError.message : '不明なエラー'}\n\n**対処法**:\n- MCPサーバーが起動しているか確認してください\n- しばらく時間をおいて再試行してください`;
+        }
       }
 
       // /writeコマンドの処理
@@ -491,8 +521,55 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
         }
       }
 
-      // 画面設計生成要求の場合（通常）
-      if (isScreenDesignRequest(processedMessage)) {
+      // 画面設計生成要求の場合（通常）- 修正提案でない場合のみ
+      if (isScreenDesign && !isModification) {
+        console.log('🎨 画面設計書生成要求として認識:', processedMessage);
+        
+        // 既存データがある場合は選択肢を表示
+        if (hasExistingData(currentData)) {
+          console.log('⚠️ 既存データを検出、選択肢を表示');
+          
+          const selectionMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            content: `🤔 **既存の設計書データがあります。どちらを希望しますか？**
+
+**現在のデータ状況:**
+${currentData.conditionsMarkdown ? '• 表示条件: あり' : ''}
+${currentData.spreadsheetData?.length ? '• 項目定義: あり' : ''}
+${currentData.supplementMarkdown ? '• 補足説明: あり' : ''}
+${currentData.mockupImage ? '• 画面イメージ: あり' : ''}
+
+**操作を選択してください:**`,
+            isUser: false,
+            timestamp: new Date(),
+            type: 'action_selection',
+            actionOptions: {
+              originalMessage: processedMessage,
+              currentData: currentData,
+              actions: [
+                {
+                  id: 'replace',
+                  label: '🔄 全て置き換える',
+                  description: '新しい設計書に全置き換え（既存データは削除）',
+                  action: 'generate_design_draft'
+                },
+                {
+                  id: 'modify',
+                  label: '➕ 既存に追加・修正',
+                  description: '今ある内容に変更を加える（既存データは保持）',
+                  action: 'generate_modification_proposal'
+                }
+              ]
+            }
+          };
+          
+          setMessages(prev => [...prev, selectionMessage]);
+          
+          return '上記の選択肢からご希望の操作を選んでください。';
+        }
+        
+        // 既存データがない場合は通常の新規生成
+        console.log('🆕 新規生成として実行');
         try {
           const mcpResult = await mcpClient.generateDesignDraft({
             prompt: processedMessage,
@@ -504,7 +581,7 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
             }
           });
           
-          console.log('🔍 MCP生レスポンス (通常):', mcpResult);
+          console.log('🔍 MCP生レスポンス (新規):', mcpResult);
           const draft: GeneratedDraft = mcpResult;
           
           const result = applyGeneratedDraft(draft);
@@ -614,6 +691,83 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
     setMessages(prev => [...prev, rejectMessage]);
   };
 
+  // 選択肢のハンドラー
+  const handleActionSelect = async (actionId: string, actionData: any): Promise<void> => {
+    console.log('🎯 ユーザー選択:', actionId, actionData);
+    
+    const currentData: WebUIData = {
+      conditionsMarkdown,
+      supplementMarkdown,
+      spreadsheetData,
+      mockupImage,
+      mermaidCode: ''
+    };
+    
+    try {
+      if (actionData.action === 'generate_design_draft') {
+        // 全置き換え
+        console.log('🔄 全置き換え処理開始...');
+        
+        const mcpResult = await mcpClient.generateDesignDraft({
+          prompt: actionData.originalMessage,
+          context: currentData,
+          target_type: 'screen',
+          project_context: {
+            name: '現在のプロジェクト',
+            id: currentProjectId || 'default'
+          }
+        });
+        
+        const draft: GeneratedDraft = mcpResult;
+        const result = applyGeneratedDraft(draft);
+        
+        const successMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: `🔄 **全置き換え完了**\n\n${result}`,
+          isUser: false,
+          timestamp: new Date(),
+          type: 'applied'
+        };
+        setMessages(prev => [...prev, successMessage]);
+        
+      } else if (actionData.action === 'generate_modification_proposal') {
+        // 既存に追加・修正
+        console.log('➕ 追加・修正処理開始...');
+        
+        const proposal = await ModificationService.generateModificationProposal(
+          actionData.originalMessage, 
+          currentData
+        );
+        
+        const proposalMessage: ChatMessage = {
+          id: Date.now().toString(),
+          content: `➕ **修正提案を生成しました**\n\n📋 **概要**: ${proposal.summary}\n\n🔧 **提案された変更**:\n${proposal.changes.map(change => 
+            `- **${change.target}** (${change.action}): ${change.reason} (信頼度: ${(change.confidence * 100).toFixed(0)}%)`
+          ).join('\n')}\n\n⚠️ **注意事項**:\n${proposal.risks.map(risk => `- ${risk}`).join('\n')}\n\n**この提案を適用しますか？**`,
+          isUser: false,
+          timestamp: new Date(),
+          type: 'proposal',
+          proposal
+        };
+        
+        setMessages(prev => [...prev, proposalMessage]);
+      }
+      
+    } catch (error) {
+      console.error('❌ 選択処理エラー:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        content: `❌ **処理エラー**\n\n選択した操作の実行中にエラーが発生しました。\n\n**エラー**: ${error instanceof Error ? error.message : '不明なエラー'}\n\n**対処法**:\n- MCPサーバーが起動しているか確認してください\n- しばらく時間をおいて再試行してください`,
+        isUser: false,
+        timestamp: new Date(),
+        type: 'rejected'
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
+
   return (
     <BaseChatPanel
       isOpen={isOpen}
@@ -631,6 +785,7 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
         message={{} as any}
         onApplyProposal={handleModificationProposal}
         onRejectProposal={handleRejectProposal}
+        onActionSelect={handleActionSelect}
       />
     </BaseChatPanel>
   );

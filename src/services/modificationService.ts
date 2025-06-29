@@ -126,34 +126,31 @@ erDiagram
   }
 
   /**
-   * 修正提案専用のAI応答生成
+   * 修正提案専用のAI応答生成（MCP経由）
    */
   private static async generateModificationResponse(systemPrompt: string, userPrompt: string): Promise<string> {
-    // 臨時的に、BedrockProviderを直接使用
-    const { BedrockProvider } = await import('./providers/bedrockProvider');
-    const { OpenAIProvider } = await import('./providers/openaiProvider');
+    const { mcpClient } = await import('./mcpClient');
     
     try {
-      // まずBedrockで試行
-      const bedrockProvider = new BedrockProvider();
-      if (bedrockProvider.checkAvailability()) {
-        const response = await bedrockProvider.generateResponse(systemPrompt, userPrompt);
-        console.log('✅ Bedrock修正提案用AI応答生成成功');
-        return response;
-      }
+      console.log('🔄 MCP経由で修正提案生成開始...');
       
-      // フォールバックでOpenAI
-      const openaiProvider = new OpenAIProvider();
-      if (openaiProvider.checkAvailability()) {
-        const response = await openaiProvider.generateResponse(systemPrompt, userPrompt);
-        console.log('✅ OpenAI修正提案用AI応答生成成功');
-        return response;
-      }
+      const mcpResult = await mcpClient.generateModificationProposal({
+        system_prompt: systemPrompt,
+        user_prompt: userPrompt,
+        project_context: {
+          name: '現在のプロジェクト',
+          id: 'default'
+        }
+      });
       
-      throw new Error('利用可能なAIプロバイダーがありません');
+      console.log('✅ MCP修正提案生成成功');
+      return mcpResult.response;
+      
     } catch (error) {
-      console.error('❌ 修正提案用AI応答生成エラー:', error);
-      throw error;
+      console.error('❌ MCP修正提案生成エラー:', error);
+      
+      // MCPサーバーエラー時は明確なエラーメッセージを返す
+      throw new Error(`MCP修正提案生成失敗: ${error instanceof Error ? error.message : '不明なエラー'}`);
     }
   }
 

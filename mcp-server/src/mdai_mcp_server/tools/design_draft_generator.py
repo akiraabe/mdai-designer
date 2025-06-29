@@ -189,7 +189,192 @@ export AWS_REGION="us-west-2"
             
             return result
 
+    @app.tool()
+    async def generate_mockup_html(
+        prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> Dict:
+        """
+        AI画面イメージ（HTML+CSS）生成
+        
+        Args:
+            prompt: 画面イメージ生成用プロンプト
+            context: 現在のWebUIデータ（要件・項目定義等）
+            project_context: プロジェクト情報
+            
+        Returns:
+            生成されたHTML+CSS文字列
+        """
+        
+        print(f"📥 AI Mockup HTML generation request received:")
+        print(f"   Prompt length: {len(prompt)} chars")
+        print(f"   Project: {project_context.get('name', '不明') if project_context else '不明'}")
+        
+        try:
+            # AI経由でHTML+CSS画面イメージを生成
+            html_result = await ai_service.generate_mockup_html(
+                prompt=prompt,
+                context=context or {},
+                project_context=project_context
+            )
+            
+            print(f"✅ AI Mockup HTML generated successfully")
+            print(f"   HTML length: {len(html_result)} chars")
+            
+            result = {
+                "html": html_result,
+                "metadata": {
+                    "generated_at": datetime.now().isoformat(),
+                    "prompt_used": prompt,
+                    "mode": "mockup_html",
+                    "project_context": project_context,
+                    "server_version": "0.1.0",
+                    "generation_type": "ai_mockup_html"
+                }
+            }
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ AI mockup HTML generation error: {e}")
+            print(f"🔄 Falling back to default HTML")
+            
+            # エラー時はダミーHTMLを返す
+            default_html = """
+<style>
+  .ai-mockup-container { font-family: sans-serif; background: #f9fafb; padding: 24px; border-radius: 12px; }
+  .ai-mockup-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 16px; color: #dc2626; }
+  .ai-mockup-error { background: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+  .ai-mockup-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .ai-mockup-table th, .ai-mockup-table td { border: 1px solid #d1d5db; padding: 8px; }
+  .ai-mockup-button { background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 1rem; cursor: pointer; }
+</style>
+<div class="ai-mockup-container">
+  <div class="ai-mockup-title">❌ AI生成エラー</div>
+  <div class="ai-mockup-error">
+    <strong>エラー詳細:</strong> {error}<br>
+    <strong>発生日時:</strong> {timestamp}<br>
+    <strong>対処方法:</strong> AI API設定を確認してください
+  </div>
+  <table class="ai-mockup-table">
+    <thead>
+      <tr><th>項目</th><th>状況</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>API接続</td><td>エラー</td></tr>
+      <tr><td>HTML生成</td><td>失敗</td></tr>
+    </tbody>
+  </table>
+  <button class="ai-mockup-button">再試行</button>
+</div>
+""".format(error=str(e), timestamp=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            
+            result = {
+                "html": default_html,
+                "metadata": {
+                    "generated_at": datetime.now().isoformat(),
+                    "prompt_used": prompt,
+                    "mode": "error",
+                    "project_context": project_context,
+                    "server_version": "0.1.0",
+                    "generation_type": "error_response",
+                    "error": str(e)
+                }
+            }
+            
+            return result
+
+    @app.tool()
+    async def generate_modification_proposal(
+        system_prompt: str,
+        user_prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> Dict:
+        """
+        AI修正提案生成
+        
+        Args:
+            system_prompt: システムプロンプト（修正提案生成用の指示）
+            user_prompt: ユーザープロンプト（具体的な修正要求）
+            context: 現在のWebUIデータ
+            project_context: プロジェクト情報
+            
+        Returns:
+            生成された修正提案テキスト
+        """
+        
+        print(f"📥 AI Modification proposal request received:")
+        print(f"   System prompt length: {len(system_prompt)} chars")
+        print(f"   User prompt length: {len(user_prompt)} chars")
+        print(f"   Project: {project_context.get('name', '不明') if project_context else '不明'}")
+        
+        try:
+            # AI経由で修正提案を生成
+            proposal_result = await ai_service.generate_modification_proposal(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                context=context or {},
+                project_context=project_context
+            )
+            
+            print(f"✅ AI Modification proposal generated successfully")
+            print(f"   Response length: {len(proposal_result)} chars")
+            
+            result = {
+                "response": proposal_result,
+                "metadata": {
+                    "generated_at": datetime.now().isoformat(),
+                    "system_prompt_used": system_prompt,
+                    "user_prompt_used": user_prompt,
+                    "mode": "modification_proposal",
+                    "project_context": project_context,
+                    "server_version": "0.1.0",
+                    "generation_type": "ai_modification_proposal"
+                }
+            }
+            
+            return result
+            
+        except Exception as e:
+            print(f"❌ AI modification proposal generation error: {e}")
+            print(f"🔄 Falling back to error response")
+            
+            # エラー時は明確なエラーメッセージを返す
+            error_response = f"""修正提案の生成中にエラーが発生しました。
+
+**エラー詳細**:
+- 発生日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- エラー内容: {str(e)}
+- ユーザー要求: {user_prompt}
+
+**対処方法**:
+1. AI API設定を確認してください
+2. ネットワーク接続を確認してください
+3. しばらく時間をおいて再度お試しください
+
+申し訳ございません。手動で修正を行うか、後ほど再試行してください。"""
+            
+            result = {
+                "response": error_response,
+                "metadata": {
+                    "generated_at": datetime.now().isoformat(),
+                    "system_prompt_used": system_prompt,
+                    "user_prompt_used": user_prompt,
+                    "mode": "error",
+                    "project_context": project_context,
+                    "server_version": "0.1.0",
+                    "generation_type": "error_response",
+                    "error": str(e)
+                }
+            }
+            
+            return result
+
     # ツール登録完了をログ出力
     print("🛠️ Design draft generation tools registered:")
     print("   - generate_design_draft: AI動的設計書ドラフト生成（OpenAI/Bedrock）")
     print("   - generate_chat_response: AI動的チャット応答生成（OpenAI/Bedrock）")
+    print("   - generate_mockup_html: AI画面イメージHTML+CSS生成（OpenAI/Bedrock）")
+    print("   - generate_modification_proposal: AI修正提案生成（OpenAI/Bedrock）")

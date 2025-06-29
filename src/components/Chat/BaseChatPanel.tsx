@@ -8,13 +8,27 @@ import type { ModificationProposal } from '../../types/aiTypes';
 import type { DocumentReference } from '../../services/documentReferenceService';
 import { MentionSuggestions } from './MentionSuggestions';
 
+export interface ActionOption {
+  id: string;
+  label: string;
+  description: string;
+  action: string;
+}
+
+export interface ActionSelection {
+  originalMessage: string;
+  currentData: any;
+  actions: ActionOption[];
+}
+
 export interface ChatMessage {
   id: string;
   content: string;
   isUser: boolean;
   timestamp: Date;
   proposal?: ModificationProposal;
-  type?: 'normal' | 'proposal' | 'applied' | 'rejected';
+  type?: 'normal' | 'proposal' | 'applied' | 'rejected' | 'action_selection';
+  actionOptions?: ActionSelection;
 }
 
 interface BaseChatPanelProps {
@@ -373,6 +387,8 @@ export const BaseChatPanel: React.FC<BaseChatPanelProps> = ({
                   ? 'bg-green-50 text-green-900 border border-green-200'
                   : message.type === 'rejected'
                   ? 'bg-red-50 text-red-900 border border-red-200'
+                  : message.type === 'action_selection'
+                  ? 'bg-blue-50 text-blue-900 border border-blue-200'
                   : 'bg-gray-100 text-gray-900'
               }`}
             >

@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, Image, Bot, X, Camera } from 'lucide-react';
 import { MarkdownSection } from '../Common/MarkdownSection';
-import { aiService } from '../../services/aiService';
+import { mcpClient } from '../../services/mcpClient';
 import { convertAiMockupToImage } from '../../utils/htmlToImage';
 
 interface MockupSectionProps {
@@ -119,8 +119,16 @@ ${tableMarkdown}
         mockupImage: null,
         mermaidCode: ""
       };
-      const html = await aiService.generateChatResponse(prompt, context);
-      setAiHtml(html);
+      const mcpResult = await mcpClient.generateMockupHtml({
+        prompt: prompt,
+        context: context,
+        project_context: {
+          name: '現在のプロジェクト',
+          id: documentId || 'default'
+        }
+      });
+      
+      setAiHtml(mcpResult.html);
     } catch (e) {
       // エラー時はダミーHTML
       const dummyHtml = `

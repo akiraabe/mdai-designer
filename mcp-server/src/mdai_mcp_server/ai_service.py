@@ -890,6 +890,465 @@ AI生成の復旧後、再度生成要求を送信してください。
                 "ai_provider": "none"
             }
         }
+    
+    async def generate_mockup_html(
+        self,
+        prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> str:
+        """
+        AI画面イメージHTML+CSS生成
+        
+        Args:
+            prompt: 画面生成用プロンプト
+            context: WebUIデータコンテキスト
+            project_context: プロジェクト情報
+            
+        Returns:
+            生成されたHTML+CSS文字列
+        """
+        
+        print(f"🎨 AI HTML生成要求:")
+        print(f"   プロンプト: {prompt[:100]}...")
+        print(f"   プロジェクト: {project_context.get('name', '不明') if project_context else '不明'}")
+        
+        # HTML生成用の詳細プロンプト
+        html_prompt = f"""
+以下の要求に基づいて、完全にスタンドアロンで動作するHTML+CSSの画面イメージを生成してください。
+
+【重要な制約】
+- 外部画像URL（via.placeholder.com等）は絶対に使用しないでください
+- 画像が必要な場合はCSS Gradient、SVG、Unicode文字（絵文字）、背景色のみを使用してください
+- インターネット接続が不要で完全にスタンドアロンで動作するHTMLにしてください
+- レスポンシブデザインを適用してください
+- モダンなCSSスタイルを使用してください
+
+【要求内容】
+{prompt}
+
+【WebUIコンテキスト】
+- 表示条件: {context.get('conditionsMarkdown', '指定なし') if context else '指定なし'}
+- 項目定義: {len(context.get('spreadsheetData', [])) if context else 0}件
+
+【出力形式】
+HTML+CSSのみを返してください。説明文は不要です。
+"""
+        
+        try:
+            # 利用可能なAIプロバイダーでHTML生成を試行
+            for provider_name in self.ai_providers:
+                try:
+                    print(f"🤖 {provider_name}でHTML生成を試行中...")
+                    
+                    if provider_name == 'bedrock':
+                        import boto3
+                        bedrock = boto3.client(
+                            'bedrock-runtime',
+                            aws_access_key_id=self.aws_access_key,
+                            aws_secret_access_key=self.aws_secret_key,
+                            region_name=self.aws_region
+                        )
+                        
+                        # Claude 3.5 SonnetでHTML生成
+                        request_body = {
+                            "anthropic_version": "bedrock-2023-05-31",
+                            "max_tokens": 4000,
+                            "temperature": 0.7,
+                            "messages": [{
+                                "role": "user",
+                                "content": html_prompt
+                            }]
+                        }
+                        
+                        response = bedrock.invoke_model(
+                            modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                            body=json.dumps(request_body)
+                        )
+                        
+                        response_body = json.loads(response['body'].read())
+                        html_result = response_body['content'][0]['text'].strip()
+                        
+                    elif provider_name == 'openai':
+                        import openai
+                        client = openai.OpenAI(api_key=self.openai_api_key)
+                        
+                        response = client.chat.completions.create(
+                            model="gpt-4",
+                            messages=[{
+                                "role": "user",
+                                "content": html_prompt
+                            }],
+                            max_tokens=4000,
+                            temperature=0.7
+                        )
+                        
+                        html_result = response.choices[0].message.content.strip()
+                    
+                    # HTML部分のみを抽出
+                    if '```html' in html_result:
+                        html_start = html_result.find('```html') + 7
+                        html_end = html_result.find('```', html_start)
+                        if html_end != -1:
+                            html_result = html_result[html_start:html_end].strip()
+                    elif '```' in html_result:
+                        html_start = html_result.find('```') + 3
+                        html_end = html_result.find('```', html_start)
+                        if html_end != -1:
+                            html_result = html_result[html_start:html_end].strip()
+                    
+                    print(f"✅ {provider_name}でHTML生成成功")
+                    print(f"   HTML長: {len(html_result)} 文字")
+                    return html_result
+                    
+                except Exception as e:
+                    print(f"❌ {provider_name}でHTML生成失敗: {e}")
+                    continue
+            
+            # 全プロバイダーで失敗した場合はフォールバックHTML
+            print("🔄 全AIプロバイダーで失敗、フォールバックHTMLを使用")
+            return await self._generate_fallback_html(prompt, context, project_context)
+            
+        except Exception as e:
+            print(f"❌ HTML生成で予期しないエラー: {e}")
+            return await self._generate_fallback_html(prompt, context, project_context)
+    
+    async def _generate_fallback_html(
+        self,
+        prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> str:
+        """AI生成失敗時のフォールバックHTML"""
+        
+        # 項目定義から簡単なテーブルを生成
+        table_rows = ""
+        if context and context.get('spreadsheetData'):
+            spreadsheet_data = context['spreadsheetData']
+            if len(spreadsheet_data) > 0:
+                # 最初のシートのセルデータから項目を抽出
+                cells = spreadsheet_data[0].get('celldata', [])
+                if cells:
+                    # 行別にデータを整理
+                    rows = {}
+                    for cell in cells:
+                        row = cell.get('r', 0)
+                        col = cell.get('c', 0)
+                        value = cell.get('v', {})
+                        if isinstance(value, dict):
+                            cell_value = value.get('v', '')
+                        else:
+                            cell_value = value
+                        
+                        if row not in rows:
+                            rows[row] = {}
+                        rows[row][col] = str(cell_value)
+                    
+                    # ヘッダー以外の行をテーブル行として追加
+                    for row_num in sorted(rows.keys()):
+                        if row_num > 0:  # ヘッダー行をスキップ
+                            row_data = rows[row_num]
+                            cells_html = ""
+                            for col in range(4):  # 項目名、データ型、必須、説明
+                                cell_value = row_data.get(col, "")
+                                cells_html += f"<td>{cell_value}</td>"
+                            table_rows += f"<tr>{cells_html}</tr>"
+        
+        if not table_rows:
+            table_rows = """
+                <tr><td>ユーザーID</td><td>string</td><td>○</td><td>ユーザーの一意識別子</td></tr>
+                <tr><td>ユーザー名</td><td>string</td><td>○</td><td>ユーザーの表示名</td></tr>
+                <tr><td>メールアドレス</td><td>email</td><td>○</td><td>連絡用メールアドレス</td></tr>
+            """
+        
+        fallback_html = f"""
+<style>
+  .ai-mockup-container {{ 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 32px; 
+    border-radius: 16px; 
+    color: #1f2937;
+    max-width: 800px;
+    margin: 0 auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }}
+  .ai-mockup-content {{
+    background: rgba(255, 255, 255, 0.95);
+    padding: 24px;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+  }}
+  .ai-mockup-title {{ 
+    font-size: 2rem; 
+    font-weight: 700; 
+    margin-bottom: 8px; 
+    color: #1e40af;
+    text-align: center;
+  }}
+  .ai-mockup-subtitle {{
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 24px;
+    font-size: 1.1rem;
+  }}
+  .ai-mockup-table {{ 
+    width: 100%; 
+    border-collapse: collapse; 
+    margin-bottom: 24px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }}
+  .ai-mockup-table th {{ 
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    padding: 16px 12px;
+    font-weight: 600;
+    text-align: left;
+    font-size: 0.9rem;
+  }}
+  .ai-mockup-table td {{ 
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.8);
+  }}
+  .ai-mockup-table tr:hover td {{
+    background: rgba(59, 130, 246, 0.1);
+  }}
+  .ai-mockup-buttons {{
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }}
+  .ai-mockup-button {{ 
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff; 
+    border: none; 
+    border-radius: 8px; 
+    padding: 12px 24px; 
+    font-size: 1rem; 
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }}
+  .ai-mockup-button:hover {{
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15);
+  }}
+  .ai-mockup-input {{ 
+    border: 2px solid #d1d5db; 
+    border-radius: 8px; 
+    padding: 12px 16px;
+    font-size: 1rem;
+    margin-right: 12px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+    background: rgba(255, 255, 255, 0.9);
+  }}
+  .ai-mockup-input:focus {{
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }}
+  .ai-mockup-warning {{
+    background: rgba(251, 146, 60, 0.1);
+    border: 1px solid #f59e0b;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    color: #92400e;
+    font-size: 0.9rem;
+  }}
+  .ai-mockup-warning strong {{
+    color: #b45309;
+  }}
+</style>
+<div class="ai-mockup-container">
+  <div class="ai-mockup-content">
+    <div class="ai-mockup-title">🚀 管理画面</div>
+    <div class="ai-mockup-subtitle">データ管理システム</div>
+    
+    <div class="ai-mockup-warning">
+      <strong>⚠️ フォールバック表示:</strong> AI生成に失敗したため、基本的な画面を表示しています。
+      AI API設定を確認してください。
+    </div>
+    
+    <table class="ai-mockup-table">
+      <thead>
+        <tr>
+          <th>📋 項目名</th>
+          <th>🔧 データ型</th>
+          <th>✅ 必須</th>
+          <th>📝 説明</th>
+        </tr>
+      </thead>
+      <tbody>
+        {table_rows}
+      </tbody>
+    </table>
+    
+    <div class="ai-mockup-buttons">
+      <input class="ai-mockup-input" placeholder="新しい項目を入力..." />
+      <button class="ai-mockup-button">➕ 追加</button>
+      <button class="ai-mockup-button">✏️ 編集</button>
+      <button class="ai-mockup-button">🗑️ 削除</button>
+    </div>
+  </div>
+</div>
+"""
+        
+        return fallback_html
+    
+    async def generate_modification_proposal(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> str:
+        """
+        AI修正提案生成
+        
+        Args:
+            system_prompt: システムプロンプト（修正提案生成用）
+            user_prompt: ユーザープロンプト（修正要求）
+            context: WebUIデータコンテキスト
+            project_context: プロジェクト情報
+            
+        Returns:
+            生成された修正提案テキスト
+        """
+        
+        print(f"🔧 AI修正提案生成要求:")
+        print(f"   システムプロンプト: {system_prompt[:100]}...")
+        print(f"   ユーザープロンプト: {user_prompt[:100]}...")
+        print(f"   プロジェクト: {project_context.get('name', '不明') if project_context else '不明'}")
+        
+        try:
+            # 利用可能なAIプロバイダーで修正提案生成を試行
+            for provider_name in self.ai_providers:
+                try:
+                    print(f"🤖 {provider_name}で修正提案生成を試行中...")
+                    
+                    if provider_name == 'bedrock':
+                        import boto3
+                        bedrock = boto3.client(
+                            'bedrock-runtime',
+                            aws_access_key_id=self.aws_access_key,
+                            aws_secret_access_key=self.aws_secret_key,
+                            region_name=self.aws_region
+                        )
+                        
+                        # Claude 3.5 Sonnetで修正提案生成
+                        request_body = {
+                            "anthropic_version": "bedrock-2023-05-31",
+                            "max_tokens": 3000,
+                            "temperature": 0.3,
+                            "messages": [{
+                                "role": "user",
+                                "content": f"{system_prompt}\n\n{user_prompt}"
+                            }]
+                        }
+                        
+                        response = bedrock.invoke_model(
+                            modelId='anthropic.claude-3-5-sonnet-20241022-v2:0',
+                            body=json.dumps(request_body)
+                        )
+                        
+                        response_body = json.loads(response['body'].read())
+                        proposal_result = response_body['content'][0]['text'].strip()
+                        
+                    elif provider_name == 'openai':
+                        import openai
+                        client = openai.OpenAI(api_key=self.openai_api_key)
+                        
+                        response = client.chat.completions.create(
+                            model="gpt-4",
+                            messages=[{
+                                "role": "system",
+                                "content": system_prompt
+                            }, {
+                                "role": "user",
+                                "content": user_prompt
+                            }],
+                            max_tokens=3000,
+                            temperature=0.3
+                        )
+                        
+                        proposal_result = response.choices[0].message.content.strip()
+                    
+                    print(f"✅ {provider_name}で修正提案生成成功")
+                    print(f"   修正提案長: {len(proposal_result)} 文字")
+                    return proposal_result
+                    
+                except Exception as e:
+                    print(f"❌ {provider_name}で修正提案生成失敗: {e}")
+                    continue
+            
+            # 全プロバイダーで失敗した場合はフォールバック提案
+            print("🔄 全AIプロバイダーで失敗、フォールバック提案を使用")
+            return await self._generate_fallback_modification_proposal(user_prompt, context, project_context)
+            
+        except Exception as e:
+            print(f"❌ 修正提案生成で予期しないエラー: {e}")
+            return await self._generate_fallback_modification_proposal(user_prompt, context, project_context)
+    
+    async def _generate_fallback_modification_proposal(
+        self,
+        user_prompt: str,
+        context: Optional[Dict] = None,
+        project_context: Optional[Dict] = None
+    ) -> str:
+        """AI生成失敗時のフォールバック修正提案"""
+        
+        fallback_proposal = f"""```json
+{{
+  "summary": "修正提案（フォールバック）",
+  "changes": [
+    {{
+      "target": "conditions",
+      "action": "modify",
+      "location": "1",
+      "originalContent": "現在の内容",
+      "newContent": "AI生成エラーのため、手動での修正をお願いします",
+      "reason": "AI APIに接続できないため、具体的な修正提案を生成できません",
+      "confidence": 0.1
+    }}
+  ],
+  "risks": [
+    "AI生成に失敗したため、適切な修正提案を提供できません",
+    "手動での確認と修正が必要です",
+    "AI API設定の確認が必要です"
+  ]
+}}
+```
+
+**⚠️ 修正提案生成エラー**
+
+AI APIに接続できないため、具体的な修正提案を生成できませんでした。
+
+**エラー詳細:**
+- 発生日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- ユーザー要求: {user_prompt}
+- プロジェクト: {project_context.get('name', '不明') if project_context else '不明'}
+
+**対処方法:**
+1. **API設定確認**: 環境変数でAI API認証情報が正しく設定されているか確認
+2. **ネットワーク確認**: インターネット接続が正常か確認
+3. **手動修正**: AIによる自動修正の代わりに手動で修正を行う
+4. **再試行**: AI APIの復旧後、再度修正提案を要求する
+
+**手動修正の参考:**
+- 表示条件タブで直接Markdownを編集
+- 項目定義タブでスプレッドシート形式で編集
+- 補足説明タブで追加情報を記入
+
+申し訳ございませんが、手動での修正をお願いします。"""
+        
+        return fallback_proposal
 
 # シングルトンインスタンス
 ai_service = AIService()
