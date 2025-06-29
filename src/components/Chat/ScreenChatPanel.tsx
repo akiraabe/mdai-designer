@@ -4,7 +4,8 @@
 import React, { useState } from 'react';
 import { BaseChatPanel, type ChatMessage } from './BaseChatPanel';
 import { ChatMessageActions } from './ChatMessage';
-import { generateDesignDraft, generateChatResponse } from '../../services/aiService';
+// import { generateDesignDraft, generateChatResponse } from '../../services/aiService'; // MCPサーバー経由に変更
+import { mcpClient } from '../../services/mcpClient';
 import { ModificationService } from '../../services/modificationService';
 import { DocumentReferenceService } from '../../services/documentReferenceService';
 import type { WebUIData, GeneratedDraft, ModificationProposal } from '../../types/aiTypes';
@@ -102,6 +103,7 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
     '/write',
     '/backup'
   ];
+
 
   // AIで生成されたデータをWebUIに反映（画面設計書用）
   const applyGeneratedDraft = (draft: GeneratedDraft): string => {
@@ -467,36 +469,77 @@ export const ScreenChatPanel: React.FC<ScreenChatPanelProps> = ({
         // データモデル情報をプロンプトに注入
         const enhancedPrompt = `${context}\n\n## 🎯 要求\n${processedMessage}\n\n**重要**: 上記のデータモデルを参考に、一貫性のある画面設計を行ってください。エンティティのフィールドをスプレッドシートの項目定義として正確に反映し、適切な画面レイアウトを提案してください。`;
         
-        const draft = await generateDesignDraft({
-          prompt: enhancedPrompt,
-          context: currentData
-        });
-        
-        const result = applyGeneratedDraft(draft);
-        return `🗄️ **Model Driven Architecture適用**\n\nデータモデル設計書の情報を基に画面設計を生成しました。\n\n${result}`;
+        try {
+          const mcpResult = await mcpClient.generateDesignDraft({
+            prompt: enhancedPrompt,
+            context: currentData,
+            target_type: 'screen',
+            project_context: {
+              name: '現在のプロジェクト',
+              id: currentProjectId || 'default'
+            }
+          });
+          
+          console.log('🔍 MCP生レスポンス (Model Driven):', mcpResult);
+          const draft: GeneratedDraft = mcpResult;
+          
+          const result = applyGeneratedDraft(draft);
+          return `🗄️ **Model Driven Architecture適用**\n\nデータモデル設計書の情報を基に画面設計を生成しました。\n\n${result}`;
+        } catch (error) {
+          console.error('❌ MCP設計書生成失敗:', error);
+          return '❌ **設計書生成エラー**\n\nMCPサーバーとの通信に失敗しました。サーバーが起動しているか確認してください。';
+        }
       }
 
       // 画面設計生成要求の場合（通常）
       if (isScreenDesignRequest(processedMessage)) {
-        const draft = await generateDesignDraft({
-          prompt: processedMessage,
-          context: currentData
-        });
-        
-        const result = applyGeneratedDraft(draft);
-        return result;
+        try {
+          const mcpResult = await mcpClient.generateDesignDraft({
+            prompt: processedMessage,
+            context: currentData,
+            target_type: 'screen',
+            project_context: {
+              name: '現在のプロジェクト',
+              id: currentProjectId || 'default'
+            }
+          });
+          
+          console.log('🔍 MCP生レスポンス (通常):', mcpResult);
+          const draft: GeneratedDraft = mcpResult;
+          
+          const result = applyGeneratedDraft(draft);
+          return result;
+        } catch (error) {
+          console.error('❌ MCP設計書生成失敗:', error);
+          return '❌ **設計書生成エラー**\n\nMCPサーバーとの通信に失敗しました。サーバーが起動しているか確認してください。';
+        }
       }
 
       // 一般的なチャット応答（Model Driven対応）
-      const systemContext = "【重要】あなたは画面設計書のWebUIにいます。どんな質問・要求でも必ず画面設計の観点から回答してください。ERダイアグラムの話が出ても、それを画面設計の要素（画面項目、フォーム、レイアウト等）に変換して回答してください。";
-      
-      let contextualPrompt = systemContext;
-      if (hasModelReference) {
-        contextualPrompt += `\n\n${context}`;
+      try {
+        const systemContext = "【重要】あなたは画面設計書のWebUIにいます。どんな質問・要求でも必ず画面設計の観点から回答してください。ERダイアグラムの話が出ても、それを画面設計の要素（画面項目、フォーム、レイアウト等）に変換して回答してください。";
+        
+        let contextualPrompt = systemContext;
+        if (hasModelReference) {
+          contextualPrompt += `\n\n${context}`;
+        }
+        contextualPrompt += `\n\n${processedMessage}`;
+        
+        const mcpResult = await mcpClient.generateChatResponse({
+          user_message: contextualPrompt,
+          context: currentData,
+          document_type: 'screen',
+          project_context: {
+            name: '現在のプロジェクト',
+            id: currentProjectId || 'default'
+          }
+        });
+        
+        return mcpResult.response;
+      } catch (mcpError) {
+        console.error('❌ MCPチャット応答失敗:', mcpError);
+        return '❌ **チャット応答エラー**\n\nMCPサーバーとの通信に失敗しました。サーバーが起動しているか確認してください。';
       }
-      contextualPrompt += `\n\n${processedMessage}`;
-      
-      return await generateChatResponse(contextualPrompt, currentData);
 
     } catch (error) {
       console.error('AI応答エラー:', error);

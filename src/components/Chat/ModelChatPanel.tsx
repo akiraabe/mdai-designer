@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { BaseChatPanel, type ChatMessage } from './BaseChatPanel';
 import { ChatMessageActions } from './ChatMessage';
-import { generateChatResponse } from '../../services/aiService';
+// import { generateChatResponse } from '../../services/aiService'; // MCPサーバー経由に変更
 import { ModificationService } from '../../services/modificationService';
 import { DocumentReferenceService } from '../../services/documentReferenceService';
 import { mcpClient } from '../../services/mcpClient';
@@ -330,9 +330,25 @@ export const ModelChatPanel: React.FC<ModelChatPanelProps> = ({
       }
 
       // 一般的なチャット応答（データモデル設計書コンテキスト）
-      const systemContext = "【重要】あなたはデータモデル設計書のWebUIにいます。どんな質問・要求でも必ずデータモデル設計の観点から回答してください。画面の話が出ても、それをデータモデル（エンティティ、リレーション、ER図等）の観点で回答してください。";
-      const contextualPrompt = `${systemContext}\n\n${userMessage}`;
-      return await generateChatResponse(contextualPrompt, currentData);
+      try {
+        const systemContext = "【重要】あなたはデータモデル設計書のWebUIにいます。どんな質問・要求でも必ずデータモデル設計の観点から回答してください。画面の話が出ても、それをデータモデル（エンティティ、リレーション、ER図等）の観点で回答してください。";
+        const contextualPrompt = `${systemContext}\n\n${userMessage}`;
+        
+        const mcpResult = await mcpClient.generateChatResponse({
+          user_message: contextualPrompt,
+          context: currentData,
+          document_type: 'model',
+          project_context: {
+            name: '現在のプロジェクト',
+            id: currentProjectId || 'default'
+          }
+        });
+        
+        return mcpResult.response;
+      } catch (mcpError) {
+        console.error('❌ MCPチャット応答失敗:', mcpError);
+        return '❌ **チャット応答エラー**\n\nMCPサーバーとの通信に失敗しました。サーバーが起動しているか確認してください。';
+      }
 
     } catch (error) {
       console.error('AI応答エラー:', error);

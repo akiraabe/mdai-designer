@@ -569,7 +569,7 @@ API設計書として必要な要素を含めてください：
 - 日本語で分かりやすく説明"""
     
     def _parse_ai_response(self, ai_response: str, prompt: str, target_type: str) -> Dict[str, Any]:
-        """AI応答をパースして構造化データに変換"""
+        """AI応答をパースして構造化データに変換（WebUI GeneratedDraft形式）"""
         
         # JSON形式の応答を抽出
         json_match = re.search(r'\{[\s\S]*\}', ai_response)
@@ -577,31 +577,162 @@ API設計書として必要な要素を含めてください：
             try:
                 parsed_data = json.loads(json_match.group(0))
                 if 'spreadsheetData' in parsed_data and 'markdownContent' in parsed_data:
-                    return parsed_data
+                    # AI生成されたJSONをGeneratedDraft形式に変換
+                    return self._convert_ai_json_to_draft(parsed_data, target_type)
             except json.JSONDecodeError:
                 pass
         
         # JSON抽出失敗時はテキストから生成
         return self._extract_from_text(ai_response, target_type)
     
+    def _convert_ai_json_to_draft(self, ai_data: Dict, target_type: str) -> Dict[str, Any]:
+        """AI生成JSONをWebUI GeneratedDraft形式に変換"""
+        
+        # スプレッドシートデータを変換
+        spreadsheet_cells = []
+        if 'spreadsheetData' in ai_data and ai_data['spreadsheetData']:
+            spreadsheet_cells = self._convert_table_to_cells(ai_data['spreadsheetData'])
+        
+        # Markdownコンテンツを分割
+        markdown_content = ai_data.get('markdownContent', '')
+        conditions, supplement = self._split_markdown_content(markdown_content)
+        
+        return {
+            "type": "mixed",
+            "spreadsheetData": spreadsheet_cells,
+            "conditions": conditions or markdown_content,
+            "supplement": supplement
+        }
+    
+    def _convert_table_to_cells(self, table_data: list) -> list:
+        """表形式データをセル形式に変換（WebUI GeneratedDraft互換）"""
+        cells = []
+        
+        # ヘッダー行
+        headers = ['項目名', 'データ型', '必須', '説明']
+        for col_index, header in enumerate(headers):
+            cells.append({
+                'r': 0,
+                'c': col_index,
+                'v': header
+            })
+        
+        # データ行
+        for row_index, row_data in enumerate(table_data):
+            data_row = row_index + 1
+            cells.extend([
+                {'r': data_row, 'c': 0, 'v': row_data.get('項目名', '')},
+                {'r': data_row, 'c': 1, 'v': row_data.get('データ型', '')},
+                {'r': data_row, 'c': 2, 'v': row_data.get('必須', '')},
+                {'r': data_row, 'c': 3, 'v': row_data.get('説明', '')}
+            ])
+        
+        return cells
+    
+    def _split_markdown_content(self, markdown_content: str) -> tuple:
+        """markdownContentをconditionsとsupplementに分割"""
+        lines = markdown_content.split('\n')
+        
+        # セクション別に分類
+        conditions_lines = []
+        supplement_lines = []
+        current_section = 'supplement'  # デフォルト
+        skip_section = False  # 項目定義セクションをスキップ
+        
+        for i, line in enumerate(lines):
+            line_lower = line.lower()
+            
+            # 表示条件に関連するセクションを検出
+            if any(keyword in line_lower for keyword in [
+                '表示条件', '条件', 'condition', 
+                '表示制御', '画面表示条件', '表示ルール'
+            ]) and line.startswith('#'):
+                current_section = 'conditions'
+                skip_section = False
+                conditions_lines.append(line)
+                continue
+                
+            # 項目定義セクションをスキップ（スプレッドシートで表示されるため）
+            elif '項目定義' in line_lower and line.startswith('#'):
+                current_section = 'skip'
+                skip_section = True
+                continue
+                
+            # 補足説明セクションを検出（明示的な場合）
+            elif any(keyword in line_lower for keyword in [
+                '補足説明', '補足', '注意', '備考', '詳細', 
+                '画面イメージ', 'レイアウト', '設計', '仕様'
+            ]) and line.startswith('#'):
+                current_section = 'supplement'
+                skip_section = False
+                supplement_lines.append(line)
+                continue
+                
+            # その他のセクション（##レベル）
+            elif line.startswith('## '):
+                # 項目定義セクション終了チェック
+                if skip_section:
+                    skip_section = False
+                    current_section = 'supplement'
+                elif current_section == 'conditions':
+                    current_section = 'supplement'
+                
+                supplement_lines.append(line)
+                continue
+            
+            # テーブル形式をスキップ（|で始まる行）
+            elif line.strip().startswith('|') and '|' in line:
+                # 項目定義のテーブル行をスキップ
+                continue
+                
+            # セクション境界での空行処理
+            elif line.strip() == '' and skip_section:
+                continue
+            
+            # 内容を適切なセクションに振り分け
+            if current_section == 'conditions' and not skip_section:
+                conditions_lines.append(line)
+            elif current_section == 'supplement' and not skip_section:
+                supplement_lines.append(line)
+        
+        # conditionsが空の場合は簡単な条件を生成
+        if not conditions_lines:
+            conditions = """## 表示条件
+- ログインしているユーザーのみ利用可能
+- 適切な権限を持つユーザーのみアクセス可能"""
+        else:
+            conditions = '\n'.join(conditions_lines).strip()
+        
+        # supplementから不要な部分を除去
+        supplement_text = '\n'.join(supplement_lines).strip()
+        
+        # タイトルが重複している場合は除去
+        if supplement_text.startswith('# '):
+            supplement_lines_filtered = supplement_text.split('\n')[1:]
+            supplement = '\n'.join(supplement_lines_filtered).strip()
+        else:
+            supplement = supplement_text
+        
+        return conditions, supplement
+
     def _extract_from_text(self, text: str, target_type: str) -> Dict[str, Any]:
-        """テキストから設計書データを抽出"""
+        """テキストから設計書データを抽出（WebUI GeneratedDraft形式）"""
         
         # 基本的なスプレッドシートデータを生成
         if target_type == 'screen':
-            spreadsheet_data = [
+            table_data = [
                 {"項目名": "ユーザーID", "データ型": "string", "必須": "○", "説明": "ユーザーを識別するID"},
                 {"項目名": "ユーザー名", "データ型": "string", "必須": "○", "説明": "表示用のユーザー名"},
                 {"項目名": "メールアドレス", "データ型": "email", "必須": "○", "説明": "ログイン用メールアドレス"}
             ]
         elif target_type == 'api':
-            spreadsheet_data = [
+            table_data = [
                 {"項目名": "user_id", "データ型": "string", "必須": "○", "説明": "ユーザーID"},
                 {"項目名": "name", "データ型": "string", "必須": "○", "説明": "ユーザー名"},
                 {"項目名": "email", "データ型": "string", "必須": "○", "説明": "メールアドレス"}
             ]
         else:  # model
-            spreadsheet_data = [
+            table_data = [
                 {"項目名": "id", "データ型": "bigint", "必須": "○", "説明": "プライマリキー"},
                 {"項目名": "name", "データ型": "varchar(255)", "必須": "○", "説明": "名前"},
                 {"項目名": "created_at", "データ型": "timestamp", "必須": "○", "説明": "作成日時"}
@@ -621,9 +752,15 @@ API設計書として必要な要素を含めてください：
 AI生成による基本的な設計書です。必要に応じて項目を追加・修正してください。
 """
         
+        # WebUI GeneratedDraft形式に変換
+        spreadsheet_cells = self._convert_table_to_cells(table_data)
+        conditions, supplement = self._split_markdown_content(markdown_content)
+        
         return {
-            "spreadsheetData": spreadsheet_data,
-            "markdownContent": markdown_content
+            "type": "mixed",
+            "spreadsheetData": spreadsheet_cells,
+            "conditions": conditions or markdown_content,
+            "supplement": supplement
         }
     
     async def _generate_fallback_design_draft(
@@ -632,9 +769,9 @@ AI生成による基本的な設計書です。必要に応じて項目を追加
         target_type: str,
         project_context: Optional[Dict]
     ) -> Dict[str, Any]:
-        """AI生成失敗時のフォールバック設計書ドラフト"""
+        """AI生成失敗時のフォールバック設計書ドラフト（WebUI GeneratedDraft形式）"""
         
-        spreadsheet_data = [
+        table_data = [
             {"項目名": "エラー", "データ型": "string", "必須": "○", "説明": f"生成エラー: AI APIに接続できませんでした"}
         ]
         
@@ -656,9 +793,15 @@ AI生成に失敗したため、基本的な設計書を表示しています。
 AI生成の復旧後、再度生成要求を送信してください。
 """
         
+        # WebUI GeneratedDraft形式に変換
+        spreadsheet_cells = self._convert_table_to_cells(table_data)
+        conditions, supplement = self._split_markdown_content(markdown_content)
+        
         return {
-            "spreadsheetData": spreadsheet_data,
-            "markdownContent": markdown_content,
+            "type": "mixed",
+            "spreadsheetData": spreadsheet_cells,
+            "conditions": conditions or markdown_content,
+            "supplement": supplement,
             "metadata": {
                 "generated_at": datetime.now().isoformat(),
                 "prompt_used": prompt,
